@@ -73,6 +73,47 @@ sudo systemctl daemon-reload && sudo systemctl enable --now mamaronext && system
 
 To deploy a later change: `git pull && npm ci && npm run build && sudo systemctl restart mamaronext`.
 
+### Behind a reverse proxy (Caddy, nginx)
+
+The page HTML asks for its stylesheet at `/_next/static/css/...`. If the proxy
+doesn't route that path to this app, the page loads but renders unstyled — that
+is the usual cause of "CSS isn't showing".
+
+Serving at the root of a domain needs nothing special:
+
+```caddyfile
+goals.example.org {
+	reverse_proxy 127.0.0.1:8087
+}
+```
+
+Watch out for a `root`/`file_server` directive in the same site block: it will
+answer `/_next/static/*` from disk with a 404 before the proxy ever sees it. A
+site block should proxy everything, or route static paths explicitly.
+
+Serving under a **sub-path** additionally needs `BASE_PATH` set **at build time**,
+because the asset URLs are baked into the build:
+
+```bash
+BASE_PATH=/goals npm run build && BASE_PATH=/goals npm run start
+```
+
+```caddyfile
+example.org {
+	reverse_proxy /goals* 127.0.0.1:8087
+}
+```
+
+Use `reverse_proxy /goals*`, not `handle_path /goals*` — `handle_path` strips the
+prefix, which fights `basePath` rather than complementing it. Add
+`Environment=BASE_PATH=/goals` to the systemd unit so restarts keep it.
+
+To check which case you're in, ask the proxy for the stylesheet directly:
+
+```bash
+curl -sI https://your-domain/_next/static/css/ -o /dev/null -w '%{http_code}\n'
+```
+
 ## Source documents
 
 The PDF and scorecard image this was transcribed from live in `resources/`, which
