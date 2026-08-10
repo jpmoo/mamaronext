@@ -10,5 +10,10 @@ const nextConfig = {
   // app, and the page renders unstyled. Must be set at BUILD time, not just at
   // start time, since the asset URLs are baked into the output.
   ...(process.env.BASE_PATH ? { basePath: process.env.BASE_PATH } : {}),
+
+  // STATIC_EXPORT=1 emits a plain folder of HTML/CSS/JS into out/ instead of a
+  // server build. Nothing in this app runs server-side, so the static site is
+  // fully equivalent — see `npm run export`.
+  ...(process.env.STATIC_EXPORT ? { output: 'export' } : {}),
 };
 export default nextConfig;

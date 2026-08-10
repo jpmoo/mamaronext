@@ -23,6 +23,22 @@ Then open http://localhost:8087.
 run while the dev server is up without clobbering its cache. `npm run start`
 serves that build, also on port 8087, bound to all interfaces.
 
+## Static export
+
+Nothing in this app runs server-side, so it can be built as a plain folder of
+files and hosted anywhere — object storage, GitHub Pages, Cloudflare Pages,
+Netlify — with no Node process at all:
+
+```bash
+npm run export
+```
+
+That writes `out/` (about 1 MB, ~20 files). Serve it with any static host, or
+locally with `cd out && python3 -m http.server 8099`. For a sub-path, set
+`BASE_PATH` on the export too: `BASE_PATH=/goals npm run export`.
+
+The Node server below is only needed if you'd rather run it that way.
+
 ## Running on a headless server
 
 Needs Node 18.18 or newer — Ubuntu's default `nodejs` package is usually too old,
