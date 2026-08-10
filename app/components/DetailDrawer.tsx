@@ -40,11 +40,19 @@ export default function DetailDrawer({ goal, onClose, onNavigate }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    // Pointerdown, not click: bubbles activate on pointerup, so this closes
-    // first and a click on another bubble still opens that one.
     const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
-      if (target && !document.querySelector('.drawer')?.contains(target)) onClose();
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      // Inside the panel: leave it alone.
+      if (target.closest('.drawer')) return;
+
+      // Another goal — an interactive bubble, or a row in the table. Don't
+      // close; the click that follows swaps this panel's contents instead.
+      if (target.closest('.bubble:not(.is-dimmed)')) return;
+      if (target.closest('.goal-cell button')) return;
+
+      onClose();
     };
     window.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', onPointerDown);
