@@ -30,7 +30,7 @@ export type Classification = {
 export const BOE_FOCUS: { key: string; label: string; blurb: string }[] = [
   {
     key: 'consistency',
-    label: 'Consistency in teaching, learning, grading',
+    label: 'Consistency in Teaching, Learning, Grading',
     blurb:
       'Articulated curriculum maps, common assessments, and rubrics with expectations for fidelity; teaming, interdisciplinary versus disciplinary; materials.',
   },
