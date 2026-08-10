@@ -988,9 +988,15 @@ table.goals tr:hover .clamp {
     table-layout: fixed;
   }
 
-  /* Repeat the column headings on every page. */
+  /*
+   * The heading row prints once, not per page.
+   *
+   * `table-header-group` is what repeats it — and it is exactly what turned up
+   * on the near-empty pages of a real export: heading, no rows. Bucket
+   * headings already label each section, so the repeat isn't worth the risk.
+   */
   table.goals thead {
-    display: table-header-group;
+    display: table-row-group;
   }
 
   /* Sticky positioning floats the header on screen; during printing it
@@ -1092,8 +1098,14 @@ table.goals tr:hover .clamp {
     color: #888;
   }
 
-  /* Bucket heading */
-  tr.bucket-head {
+  /*
+   * No row ever splits across a page. Measured at the printed width, the
+   * tallest row (Elementary Literacy, with four schools inline) is 324px
+   * against a 743px page, so nothing needs to fragment — and forbidding it
+   * keeps Chrome away from the table-fragmentation path that was emitting
+   * runs of blank pages.
+   */
+  table.goals tr {
     break-inside: avoid;
   }
 

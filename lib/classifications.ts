@@ -35,19 +35,14 @@ export const BOE_FOCUS: { key: string; label: string; blurb: string }[] = [
       'Articulated curriculum maps, common assessments, and rubrics with expectations for fidelity; teaming, interdisciplinary versus disciplinary; materials.',
   },
   {
-    key: 'integrity',
-    label: 'Academic Integrity and Honesty',
-    blurb: 'Honest work, and the prevention and response practices around it.',
+    key: 'technology',
+    label: 'Technology',
+    blurb: 'Changes as they occur toward fulfillment of the technology playbook.',
   },
   {
     key: 'community',
     label: 'Community Expectations and Standards',
     blurb: 'Relationship and collaboration — what the district and its community expect of each other.',
-  },
-  {
-    key: 'technology',
-    label: 'Technology',
-    blurb: 'Changes as they occur toward fulfillment of the technology playbook.',
   },
   {
     key: 'empowerment',
@@ -331,6 +326,6 @@ export const CLASSIFICATIONS: Record<string, Classification> = {
     theme: 'mentorship',
     scorecard: 'adb',
     dataPoints: ['discipline'],
-    boeFocus: ['integrity', 'technology'],
+    boeFocus: ['technology'],
   },
 };
