@@ -919,8 +919,84 @@ table.goals tr:hover .clamp {
 
 /* ── Print / PDF export ─────────────────────────────────────────────────── */
 
-.print-header {
-  display: none;
+/*
+ * The printed document is built by PrintDocument, not by restyling the app.
+ * It lives off-screen (fixed, so it can't extend the scroll area) but fully
+ * laid out, because its rows have to be measurable before they can be packed
+ * into pages.
+ */
+.print-doc {
+  position: fixed;
+  left: -100000px;
+  top: 0;
+  width: 980px;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #000;
+  background: #fff;
+}
+
+.p-header h2 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.p-header p {
+  margin: 2px 0 8px;
+  font-size: 9px;
+  color: #444;
+}
+
+.p-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.p-table th,
+.p-table td {
+  padding: 4px 5px;
+  vertical-align: top;
+  text-align: left;
+  border-bottom: 0.5px solid #bbb;
+  overflow-wrap: break-word;
+}
+
+.p-table thead th {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #555;
+  border-bottom: 1px solid #000;
+}
+
+.p-row .p-goal {
+  font-weight: 700;
+}
+
+.p-row .p-scope {
+  color: #555;
+}
+
+.p-bucket th {
+  background: #ececec;
+  border-top: 1px solid #000;
+  border-bottom: 0.5px solid #000;
+  padding: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #000;
+}
+
+.p-bucket-count {
+  margin-left: 8px;
+  font-size: 9px;
+  font-weight: 400;
+  color: #444;
 }
 
 @media print {
@@ -929,12 +1005,8 @@ table.goals tr:hover .clamp {
     margin: 10mm;
   }
 
-  /* Chrome is the app; the table is the document. */
-  .masthead,
-  .toolbar,
-  .legend,
-  .drawer,
-  .tooltip,
+  /* The app itself never prints — only the pre-paginated document does. */
+  .shell,
   nextjs-portal {
     display: none !important;
   }
@@ -946,210 +1018,41 @@ table.goals tr:hover .clamp {
     background: #fff;
   }
 
-  .shell {
-    height: auto;
-    display: block;
-  }
-
-  .stage,
-  .stage.is-table {
-    display: block;
-    padding: 0;
-    overflow: visible;
-  }
-
-  .print-header {
-    display: block;
-    margin-bottom: 8px;
-  }
-
-  .print-header h2 {
-    margin: 0;
-    font-size: 13pt;
-  }
-
-  .print-header p {
-    margin: 2px 0 0;
-    font-size: 8pt;
-    color: #444;
-  }
-
-  .table-wrap {
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    overflow: visible;
-  }
-
-  table.goals {
-    min-width: 0;
-    width: 100%;
-    font-size: 7.5pt;
-    table-layout: fixed;
-  }
-
-  /*
-   * The heading row prints once, not per page.
-   *
-   * `table-header-group` is what repeats it — and it is exactly what turned up
-   * on the near-empty pages of a real export: heading, no rows. Bucket
-   * headings already label each section, so the repeat isn't worth the risk.
-   */
-  table.goals thead {
-    display: table-row-group;
-  }
-
-  /* Sticky positioning floats the header on screen; during printing it
-     interferes with pagination. */
-  table.goals th {
+  .print-doc {
     position: static;
-  }
-
-  table.goals th,
-  table.goals td {
-    padding: 4px 5px;
-    vertical-align: top;
-    border-bottom: 0.5pt solid #bbb;
-  }
-
-  table.goals thead th {
-    background: none;
-    border-bottom: 1pt solid #000;
-    color: #000;
-    font-size: 7pt;
-  }
-
-  /* Fixed column widths: with `table-layout: fixed` the browser doesn't have to
-     measure content to lay the table out, which keeps long prose from blowing
-     a column out. */
-  table.goals td.narrow,
-  table.goals thead th:nth-child(1),
-  table.goals thead th:nth-child(2) {
-    width: auto;
-    white-space: normal;
-  }
-
-  table.goals thead th:nth-child(1) {
-    width: 14%;
-  }
-
-  table.goals thead th:nth-child(2) {
-    width: 11%;
-  }
-
-  table.goals thead th:nth-child(3) {
-    width: 25%;
-  }
-
-  table.goals thead th:nth-child(4),
-  table.goals thead th:nth-child(5) {
-    width: 25%;
-  }
-
-  table.goals td.long {
-    max-width: none;
-    min-width: 0;
-  }
-
-  /*
-   * Every cell holds inline content only.
-   *
-   * Chrome mis-fragments a table row whose cells contain nested *blocks* — it
-   * splits the row and then emits several entirely blank pages before
-   * resuming. Inline content fragments the way running text does, which is the
-   * well-trodden path. So the per-school lists print as `Label: text` runs
-   * rather than as a <ul>, and the line clamp is dropped entirely.
-   */
-  table.goals .clamp {
-    display: inline;
-    overflow: visible;
-    -webkit-line-clamp: unset;
-    line-clamp: unset;
-  }
-
-  ul.perschool,
-  ul.perschool li,
-  ul.perschool strong,
-  ul.perschool span {
-    display: inline;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    font-size: inherit;
-  }
-
-  ul.perschool strong {
-    color: #000;
-    text-transform: none;
-    letter-spacing: 0;
-  }
-
-  ul.perschool strong::after {
-    content: ': ';
-    font-weight: 400;
-  }
-
-  ul.perschool li::after {
-    content: '\A0';
-  }
-
-  ul.perschool li + li::before {
-    content: '· ';
-    color: #888;
-  }
-
-  /*
-   * No break hints on rows at all.
-   *
-   * `break-inside: avoid` here tripled the page count on a real export (34 ->
-   * 99), so whatever is mis-paginating that table treats an unbreakable row as
-   * a reason to start a new page. Leave the decision to the browser.
-   */
-
-  tr.bucket-head th {
-    position: static;
-    background: #ececec !important;
-    border-top: 1pt solid #000;
-    border-bottom: 0.5pt solid #000;
-    padding: 6px 5px 5px;
-    font-size: 8.5pt;
-    font-weight: 700;
-    color: #000 !important;
-    text-transform: none;
-    letter-spacing: 0;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  .bucket-toggle {
-    display: block;
+    left: auto;
     width: auto;
   }
 
-  .bucket-toggle .caret {
+  /* The measuring pass has served its purpose by now. */
+  .p-measure {
     display: none;
   }
 
-  .bucket-count {
-    color: #444;
-    font-weight: 400;
+  /*
+   * Each block is exactly one page and holds only whole rows, so nothing has
+   * to be fragmented — which is the entire point. `overflow: hidden` is a
+   * backstop: if the paper turns out smaller than assumed, a page clips rather
+   * than spilling into a blank one.
+   */
+  .p-page {
+    break-after: page;
+    page-break-after: always;
+    break-inside: avoid;
+    overflow: hidden;
   }
 
-  table.goals .goal-cell {
-    font-weight: 700;
+  .p-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 
-  table.goals .goal-cell button {
-    text-decoration: none;
-    padding: 0;
-  }
-
-  .init-dot {
+  .p-bucket th,
+  .p-table thead th {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
-  /* Animations mid-print can leave elements measured at a transient size. */
   * {
     animation: none !important;
     transition: none !important;

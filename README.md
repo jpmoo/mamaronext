@@ -165,8 +165,26 @@ conditions, semester plans, and measures, so a query like `Open Architects` find
 every goal that depends on it.
 
 The **Table** view lists the same data as text, bucketed by the same lens as the
-map. It doubles as the accessibility fallback so no meaning rests on color alone.
-Long cells expand on row hover.
+map, with sections that collapse individually. It doubles as the accessibility
+fallback so no meaning rests on color alone. Long cells expand on row hover.
+
+### PDF export
+
+**Export PDF** in the table view prints a document the app paginates itself.
+
+That is deliberate. Left to the browser, a long table fragments differently in
+every engine — the same document printed clean in Chrome and produced dozens of
+blank pages in Firefox, and no combination of `break-inside`, `break-after`, or
+repeated-header CSS fixed it in both. So the browser no longer decides: the app
+measures every row at the printed width, packs whole rows into fixed page-sized
+blocks, and puts an explicit page break after each. Nothing straddles a page
+boundary, so there is nothing to fragment.
+
+Pages are sized to the *smaller* of Letter and A4 in landscape (980 x 715 CSS
+px at 96dpi, 10mm margins), so one block fits either paper. The export reflects
+the current lens, filters, search, and which sections are expanded, and carries
+the full prose rather than the clamped on-screen version. See
+[`app/components/PrintDocument.tsx`](app/components/PrintDocument.tsx).
 
 ## Layout behavior
 

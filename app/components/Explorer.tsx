@@ -7,6 +7,7 @@ import { LENSES, THEME_LEGEND, groupsForGoal, lensById } from '@/lib/lenses';
 import BubbleMap from './BubbleMap';
 import DetailDrawer from './DetailDrawer';
 import GoalTable, { tableBuckets } from './GoalTable';
+import PrintDocument from './PrintDocument';
 
 type View = 'map' | 'table';
 
@@ -134,7 +135,8 @@ export default function Explorer() {
   }, [school, query]);
 
   return (
-    <div className="shell">
+    <>
+      <div className="shell">
       <header className="masthead">
         {/* Static import, not a literal "/logo.png": the imported URL carries
             the basePath/assetPrefix, so the logo still resolves when the app is
@@ -270,18 +272,6 @@ export default function Explorer() {
         ))}
       </div>
 
-      {/* Print-only, so the exported PDF says what it is and what it was filtered to. */}
-      <div className="print-header">
-        <h2>Mamaronext — 2026-2027 School and District Goals</h2>
-        <p>
-          Mamaroneck Union Free School District · Arranged by {lens.label}
-          {school ? ` · School: ${schoolLabel(school)}` : ''}
-          {query.trim() ? ` · Search: “${query.trim()}”` : ''}
-          {shown !== inScope.length ? ` · ${shown} of ${inScope.length} goals` : ''}
-          {printedOn ? ` · ${printedOn}` : ''}
-        </p>
-      </div>
-
       <main className={`stage${view === 'table' ? ' is-table' : ''}`}>
         {view === 'map' ? (
           <BubbleMap
@@ -329,6 +319,24 @@ export default function Explorer() {
       {selected && (
         <DetailDrawer goal={selected} onClose={() => setSelected(null)} onNavigate={setSelected} />
       )}
-    </div>
+      </div>
+
+      <PrintDocument
+        lens={lens}
+        isMatch={isMatch}
+        collapsed={collapsedBuckets}
+        subtitle={[
+          'Mamaroneck Union Free School District',
+          `Arranged by ${lens.label}`,
+          school ? `School: ${schoolLabel(school)}` : '',
+          query.trim() ? `Search: “${query.trim()}”` : '',
+          shown !== inScope.length ? `${shown} of ${inScope.length} goals` : '',
+          printedOn,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      />
+
+    </>
   );
 }
