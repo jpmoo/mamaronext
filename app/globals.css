@@ -349,6 +349,9 @@ button {
 
 .bubble.is-dimmed {
   opacity: 0.13;
+  /* Filtered-out goals are context, not targets: no clicking, dragging,
+     hovering, or focusing them while a filter or search is narrowing the map. */
+  pointer-events: none;
 }
 
 .bubble .scope-tag {

@@ -143,6 +143,7 @@ export default function BubbleMap({
 
   const handlePointerDown = (e: React.PointerEvent, node: BubbleNode) => {
     if (e.button !== 0) return;
+    if (!isMatch(node.goal)) return;
     e.preventDefault();
     try {
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
@@ -333,7 +334,9 @@ export default function BubbleMap({
                     : `${goal.title} — ${goal.scope}`
                 }
                 aria-expanded={isUmbrella ? isOpen : undefined}
+                aria-disabled={dimmed || undefined}
                 onKeyDown={(e) => {
+                  if (dimmed) return;
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     activate(goal);
