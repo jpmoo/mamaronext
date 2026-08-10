@@ -780,6 +780,30 @@ ul.perschool .clamp {
   line-clamp: 2;
 }
 
+.bucket-toggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.bucket-toggle .caret {
+  width: 14px;
+  font-size: 11px;
+  color: var(--accent-strong);
+  flex: none;
+}
+
+.bucket-toggle:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 tr.bucket-head th {
   position: static;
   background: var(--accent-wash);
@@ -972,14 +996,24 @@ table.goals tr:hover .clamp {
     font-size: 8pt;
   }
 
-  /* Repeat the column headings on every page, and don't split a goal across
-     a page break. */
+  /* Repeat the column headings on every page. */
   table.goals thead {
     display: table-header-group;
   }
 
-  table.goals tr {
+  /* Sticky positioning is what makes the header float on screen; left on while
+     printing it interferes with pagination. */
+  table.goals th {
+    position: static;
+  }
+
+  /* Deliberately NOT `break-inside: avoid` on rows. Some goals are half a page
+     tall, and refusing to split them strands most of a page each time — which
+     is what turned five pages of content into ten, most of them near-empty.
+     Only the short bucket heading avoids being orphaned. */
+  tr.bucket-head {
     break-inside: avoid;
+    break-after: avoid;
   }
 
   table.goals th,

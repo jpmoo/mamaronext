@@ -60,7 +60,7 @@ export const LENSES: Lens[] = [
   },
   {
     id: 'scorecard',
-    label: 'Scorecard bucket',
+    label: 'Scorecard buckets',
     colorMode: 'group',
     groups: SCORECARD_BUCKETS.map((b, i) => ({
       id: b.key,

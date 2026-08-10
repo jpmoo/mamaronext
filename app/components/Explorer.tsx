@@ -6,7 +6,7 @@ import { GOALS, SCHOOLS, schoolLabel, type Goal } from '@/lib/goals';
 import { LENSES, SCORECARD_LEGEND, groupsForGoal, lensById } from '@/lib/lenses';
 import BubbleMap from './BubbleMap';
 import DetailDrawer from './DetailDrawer';
-import GoalTable from './GoalTable';
+import GoalTable, { tableBuckets } from './GoalTable';
 
 type View = 'map' | 'table';
 
@@ -22,6 +22,7 @@ export default function Explorer() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [resetSignal, setResetSignal] = useState(0);
   const [printedOn, setPrintedOn] = useState('');
+  const [collapsedBuckets, setCollapsedBuckets] = useState<Set<string>>(new Set());
 
   const lens = lensById(lensId);
 
@@ -83,6 +84,22 @@ export default function Explorer() {
   );
 
   const allOpen = UMBRELLAS.every((id) => expanded.has(id));
+
+  // Bucket ids belong to a lens, so a lens change starts everything expanded.
+  useEffect(() => setCollapsedBuckets(new Set()), [lensId]);
+
+  const shownBuckets = useMemo(() => tableBuckets(lens, isMatch), [lens, isMatch]);
+  const allBucketsCollapsed =
+    shownBuckets.length > 0 && shownBuckets.every((b) => collapsedBuckets.has(b.group.id));
+
+  const toggleBucket = useCallback((groupId: string) => {
+    setCollapsedBuckets((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  }, []);
 
   /**
    * Export by printing. The table is text, so the browser's own "Save as PDF"
@@ -222,9 +239,23 @@ export default function Explorer() {
               </button>
             </>
           ) : (
-            <button className="chip" onClick={exportPdf}>
-              Export PDF
-            </button>
+            <>
+              <button
+                className="chip"
+                onClick={() =>
+                  setCollapsedBuckets(
+                    allBucketsCollapsed
+                      ? new Set()
+                      : new Set(shownBuckets.map((b) => b.group.id)),
+                  )
+                }
+              >
+                {allBucketsCollapsed ? 'Expand all' : 'Collapse all'}
+              </button>
+              <button className="chip" onClick={exportPdf}>
+                Export PDF
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -280,7 +311,13 @@ export default function Explorer() {
             resetSignal={resetSignal}
           />
         ) : (
-          <GoalTable lens={lens} isMatch={isMatch} onSelect={setSelected} />
+          <GoalTable
+            lens={lens}
+            isMatch={isMatch}
+            onSelect={setSelected}
+            collapsed={collapsedBuckets}
+            onToggleBucket={toggleBucket}
+          />
         )}
       </main>
 

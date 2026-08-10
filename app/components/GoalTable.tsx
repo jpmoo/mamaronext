@@ -9,7 +9,22 @@ type Props = {
   lens: Lens;
   isMatch: (goal: Goal) => boolean;
   onSelect: (goal: Goal) => void;
+  collapsed: Set<string>;
+  onToggleBucket: (groupId: string) => void;
 };
+
+/**
+ * The buckets the table will render, in lens order, empty ones dropped.
+ * Exported so the toolbar's expand/collapse-all knows what's on screen.
+ */
+export function tableBuckets(lens: Lens, isMatch: (goal: Goal) => boolean) {
+  return lens.groups
+    .map((group) => ({
+      group,
+      rows: GOALS.filter((g) => groupsForGoal(lens, g).includes(group.id) && isMatch(g)),
+    }))
+    .filter((b) => b.rows.length > 0);
+}
 
 /**
  * The same buckets as the map, as text. This is also the accessibility relief
@@ -50,17 +65,16 @@ function SemesterCell({ goal, field }: { goal: Goal; field: 'fall' | 'spring' })
 const scorecardTitle = (goal: Goal) =>
   SCORECARD_BUCKETS.find((b) => b.key === CLASSIFICATIONS[goal.id]?.scorecard)?.label ?? '';
 
-export default function GoalTable({ lens, isMatch, onSelect }: Props) {
+export default function GoalTable({
+  lens,
+  isMatch,
+  onSelect,
+  collapsed,
+  onToggleBucket,
+}: Props) {
   // The table always lists every goal — collapsing an umbrella is a way of
   // simplifying the map, not of hiding rows from a document.
-  const goals = GOALS;
-
-  const buckets = lens.groups
-    .map((group) => ({
-      group,
-      rows: goals.filter((g) => groupsForGoal(lens, g).includes(group.id) && isMatch(g)),
-    }))
-    .filter((b) => b.rows.length > 0);
+  const buckets = tableBuckets(lens, isMatch);
 
   if (buckets.length === 0) {
     return (
@@ -82,20 +96,32 @@ export default function GoalTable({ lens, isMatch, onSelect }: Props) {
             <th>Spring Semester</th>
           </tr>
         </thead>
-        {buckets.map(({ group, rows }) => (
+        {buckets.map(({ group, rows }) => {
+          const isOpen = !collapsed.has(group.id);
+          return (
           <tbody key={group.id}>
             <tr className="bucket-head">
               <th colSpan={5} scope="colgroup">
-                {group.color && (
-                  <span className="init-dot" style={{ background: group.color }} />
-                )}
-                {group.title}
-                <span className="bucket-count">
-                  {rows.length} goal{rows.length === 1 ? '' : 's'}
-                </span>
+                <button
+                  className="bucket-toggle"
+                  onClick={() => onToggleBucket(group.id)}
+                  aria-expanded={isOpen}
+                >
+                  <span className="caret" aria-hidden="true">
+                    {isOpen ? '▾' : '▸'}
+                  </span>
+                  {group.color && (
+                    <span className="init-dot" style={{ background: group.color }} />
+                  )}
+                  {group.title}
+                  <span className="bucket-count">
+                    {rows.length} goal{rows.length === 1 ? '' : 's'}
+                  </span>
+                </button>
               </th>
             </tr>
-            {rows.map((goal) => (
+            {isOpen &&
+              rows.map((goal) => (
               <tr key={goal.id}>
                 <td className="goal-cell">
                   <button onClick={() => onSelect(goal)}>
@@ -124,9 +150,10 @@ export default function GoalTable({ lens, isMatch, onSelect }: Props) {
                   <SemesterCell goal={goal} field="spring" />
                 </td>
               </tr>
-            ))}
+              ))}
           </tbody>
-        ))}
+          );
+        })}
       </table>
     </div>
   );
