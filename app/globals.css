@@ -925,11 +925,11 @@ table.goals tr:hover .clamp {
 
 @media print {
   @page {
-    size: landscape;
-    margin: 12mm;
+    size: portrait;
+    margin: 14mm;
   }
 
-  /* Chrome is the app; the table is the document. */
+  /* Chrome is the app; the goals are the document. */
   .masthead,
   .toolbar,
   .legend,
@@ -939,7 +939,10 @@ table.goals tr:hover .clamp {
     display: none !important;
   }
 
+  html,
   body {
+    height: auto;
+    overflow: visible;
     background: #fff;
   }
 
@@ -957,12 +960,14 @@ table.goals tr:hover .clamp {
 
   .print-header {
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 14px;
+    border-bottom: 1.5pt solid #000;
+    padding-bottom: 6px;
   }
 
   .print-header h2 {
     margin: 0;
-    font-size: 14pt;
+    font-size: 15pt;
   }
 
   .print-header p {
@@ -978,48 +983,117 @@ table.goals tr:hover .clamp {
     overflow: visible;
   }
 
-  table.goals {
+  /*
+   * The screen layout is a table; the printed one is not.
+   *
+   * Chrome mis-fragments a table row whose cells contain nested lists — it
+   * splits the row and then emits several entirely blank pages before
+   * resuming. Rather than fight that with break hints (which cause their own
+   * stranded pages), print drops out of table layout entirely: every goal
+   * becomes an ordinary block, which paginates the way running text does.
+   */
+  table.goals,
+  table.goals tbody,
+  table.goals tr,
+  table.goals td {
+    display: block;
+    width: auto;
     min-width: 0;
-    width: 100%;
-    font-size: 8pt;
+    max-width: none;
   }
 
-  /* Repeat the column headings on every page. */
+  /* Column headings mean nothing once the columns are gone. */
   table.goals thead {
-    display: table-header-group;
+    display: none;
   }
 
-  /* Sticky positioning is what makes the header float on screen; left on while
-     printing it interferes with pagination. */
-  table.goals th {
-    position: static;
+  table.goals {
+    font-size: 10pt;
   }
 
-  /* Deliberately NOT `break-inside: avoid` on rows. Some goals are half a page
-     tall, and refusing to split them strands most of a page each time — which
-     is what turned five pages of content into ten, most of them near-empty.
-     `break-after: avoid` on the bucket heading is left off for the same reason:
-     when the row after it is tall, Chrome will emit empty pages trying to keep
-     the pair together. Only the short heading itself resists splitting. */
+  table.goals tbody {
+    margin-bottom: 4pt;
+  }
+
+  /* Bucket heading */
   tr.bucket-head {
+    display: block;
     break-inside: avoid;
   }
 
-  html,
-  body {
-    height: auto;
-    overflow: visible;
+  tr.bucket-head th {
+    display: block;
+    position: static;
+    background: none !important;
+    border: 0;
+    border-top: 1.5pt solid #000;
+    padding: 10pt 0 4pt;
+    font-size: 12pt;
+    font-weight: 700;
+    color: #000 !important;
+    text-transform: none;
+    letter-spacing: 0;
   }
 
-  /* Animations mid-print can leave elements measured at a transient size. */
-  * {
-    animation: none !important;
-    transition: none !important;
+  .bucket-toggle {
+    display: block;
+    width: auto;
   }
 
-  table.goals th,
-  table.goals td {
-    padding: 5px 7px;
+  .bucket-toggle .caret {
+    display: none;
+  }
+
+  .bucket-count {
+    color: #555;
+    font-weight: 400;
+  }
+
+  /* One goal = one block */
+  table.goals tbody tr:not(.bucket-head) {
+    padding: 7pt 0;
+    border-bottom: 0.5pt solid #bbb;
+  }
+
+  table.goals tbody tr:not(.bucket-head) td {
+    padding: 0;
+    border: 0;
+  }
+
+  table.goals .goal-cell {
+    font-size: 11pt;
+    font-weight: 700;
+    margin-bottom: 1pt;
+  }
+
+  table.goals .goal-cell button {
+    text-decoration: none;
+    padding: 0;
+  }
+
+  /* Beats the screen rule `table.goals td.narrow { width: 1% }`, which as a
+     block would squeeze the scope to one word per line. */
+  table.goals td.narrow,
+  table.goals td[data-label='Scope'] {
+    width: auto;
+    white-space: normal;
+    font-size: 8.5pt;
+    color: #555;
+    margin-bottom: 4pt;
+  }
+
+  /* The column heading becomes an inline caption on each field. */
+  table.goals td[data-label='Condition']::before,
+  table.goals td[data-label='Fall Semester']::before,
+  table.goals td[data-label='Spring Semester']::before {
+    content: attr(data-label);
+    display: block;
+    margin-top: 4pt;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #666;
   }
 
   /* The screen clamps long prose to keep rows scannable; the PDF is the place
@@ -1032,28 +1106,24 @@ table.goals tr:hover .clamp {
     line-clamp: unset;
   }
 
-  table.goals td.long {
-    max-width: none;
-    min-width: 0;
+  ul.perschool li {
+    padding: 2pt 0;
+    border-bottom: 0;
   }
 
-  table.goals .goal-cell button {
-    text-decoration: none;
+  ul.perschool strong {
+    color: #000;
+    font-size: 8.5pt;
   }
 
-  tr.bucket-head th {
-    border-top: 1.5pt solid #000;
-    border-bottom: 0.5pt solid #000;
-    background: #ececec !important;
-    color: #000 !important;
-    font-size: 9.5pt;
-  }
-
-  /* Keep the category dots — they're the only color carrying meaning here. */
-  .init-dot,
-  tr.bucket-head th,
-  .semester .measure {
+  .init-dot {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  /* Animations mid-print can leave elements measured at a transient size. */
+  * {
+    animation: none !important;
+    transition: none !important;
   }
 }

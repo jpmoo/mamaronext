@@ -273,9 +273,15 @@ export type BuildOptions = {
 
 export function buildLayout(options: BuildOptions): MapLayout {
   const { width, height, lens, expanded, previous, settleTicks = 500 } = options;
+
+  // Region geometry and bubble size are computed from every goal, not just the
+  // visible ones. Otherwise expanding an umbrella changes the weights, which
+  // resizes every region and rescales every bubble — stranding bubbles outside
+  // plates that moved under them. Expanding is now purely additive.
+  const regions = computeRegions(width, height, lens, GOALS);
+  const scale = computeScale(regions, lens, GOALS);
+
   const goals = visibleGoals(expanded);
-  const regions = computeRegions(width, height, lens, goals);
-  const scale = computeScale(regions, lens, goals);
 
   const nodes: BubbleNode[] = [];
 
@@ -362,6 +368,10 @@ export function buildLayout(options: BuildOptions): MapLayout {
       sim.stop();
     }
   }
+
+  // Carried-over positions were measured against the previous layout, so clamp
+  // unconditionally — a bubble must never be left sitting outside its plate.
+  clampNodes(nodes);
 
   return {
     width,

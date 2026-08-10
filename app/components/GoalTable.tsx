@@ -139,14 +139,16 @@ export default function GoalTable({
                     {goal.title}
                   </button>
                 </td>
-                <td className="narrow">{goal.scope}</td>
-                <td className="long">
+                <td className="narrow" data-label="Scope">
+                  {goal.scope}
+                </td>
+                <td className="long" data-label="Condition">
                   <div className="clamp">{goal.condition ?? '—'}</div>
                 </td>
-                <td className="long">
+                <td className="long" data-label="Fall Semester">
                   <SemesterCell goal={goal} field="fall" />
                 </td>
-                <td className="long">
+                <td className="long" data-label="Spring Semester">
                   <SemesterCell goal={goal} field="spring" />
                 </td>
               </tr>

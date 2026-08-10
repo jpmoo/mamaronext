@@ -31,6 +31,9 @@ type Props = {
 
 const NEUTRAL = '#898781';
 
+/** Pointer movement, in px, that separates a click from a drag. */
+const DRAG_SLOP = 5;
+
 export default function BubbleMap({
   lens,
   isMatch,
@@ -50,6 +53,8 @@ export default function BubbleMap({
   const dragRef = useRef<{
     node: BubbleNode;
     moved: boolean;
+    startX: number;
+    startY: number;
     sim?: ReturnType<typeof createSimulation>;
     groupNodes: BubbleNode[];
   } | null>(null);
@@ -186,9 +191,12 @@ export default function BubbleMap({
       // Pointer capture is a nicety; dragging still works without it.
     }
     const sim = simsRef.current.get(node.group);
+    const start = toSvgPoint(e.clientX, e.clientY);
     dragRef.current = {
       node,
       moved: false,
+      startX: start.x,
+      startY: start.y,
       sim,
       groupNodes: nodesRef.current.filter((n) => n.group === node.group),
     };
@@ -205,7 +213,14 @@ export default function BubbleMap({
     }
     const { x, y } = toSvgPoint(e.clientX, e.clientY);
     const n = drag.node;
-    if (Math.hypot(x - n.x, y - n.y) > 2) drag.moved = true;
+
+    // Measure against where the press started, not the last frame, and allow a
+    // few pixels of slop — otherwise the smallest tremor during a click turns
+    // it into a drag and the bubble never activates.
+    if (!drag.moved) {
+      if (Math.hypot(x - drag.startX, y - drag.startY) <= DRAG_SLOP) return;
+      drag.moved = true;
+    }
 
     n.fx = Math.min(n.maxX - n.r, Math.max(n.minX + n.r, x));
     n.fy = Math.min(n.maxY - n.r, Math.max(n.minY + n.r, y));
@@ -440,12 +455,14 @@ export default function BubbleMap({
                   </text>
                 )}
                 {isUmbrella && (
+                  /* Kept at ~0.6r rather than the bottom edge: down there the
+                     chord is narrower than the word, so it crossed the stroke. */
                   <text
                     className="expander"
                     x={node.x}
-                    y={node.y + node.r - 7}
+                    y={node.y + node.r * 0.6}
                     textAnchor="middle"
-                    fontSize={11}
+                    fontSize={Math.max(9, fs * 0.8)}
                     fill={node.color}
                   >
                     {isOpen ? '– collapse' : '+ expand'}
