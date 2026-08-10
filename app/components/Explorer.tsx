@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import logo from '@/public/logo.png';
 import { GOALS, SCHOOLS, type Goal } from '@/lib/goals';
 import { LENSES, SCORECARD_LEGEND, groupsForGoal, lensById } from '@/lib/lenses';
 import BubbleMap from './BubbleMap';
@@ -98,8 +99,16 @@ export default function Explorer() {
   return (
     <div className="shell">
       <header className="masthead">
+        {/* Static import, not a literal "/logo.png": the imported URL carries
+            the basePath/assetPrefix, so the logo still resolves when the app is
+            served under a sub-path. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="Mamaroneck Union Free School District" />
+        <img
+          src={logo.src}
+          width={logo.width}
+          height={logo.height}
+          alt="Mamaroneck Union Free School District"
+        />
         <div>
           <h1>
             <span className="wordmark">

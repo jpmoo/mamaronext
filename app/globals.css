@@ -284,15 +284,13 @@ button {
   overflow: auto;
 }
 
+/* No frame of its own — the region plates are the only borders on the map, so
+   the container doesn't add a second edge above and below them. */
 .map {
   flex: 1;
   min-height: 0;
   width: 100%;
   overflow: hidden;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: var(--shadow-1);
 }
 
 .map svg {

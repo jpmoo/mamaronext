@@ -8,7 +8,7 @@ import {
   type SimulationLinkDatum,
   type SimulationNodeDatum,
 } from 'd3-force';
-import { GOALS, type Goal } from './goals';
+import { GOALS, schoolLabel, type Goal } from './goals';
 import { groupsForGoal, scorecardColor, type Lens, type LensGroup } from './lenses';
 
 export const LAYOUT = {
@@ -58,6 +58,8 @@ export type MapLayout = {
   width: number;
   height: number;
   scale: number;
+  /** Shared by every bubble, so the map reads as one system. */
+  labelFontSize: number;
   regions: RegionBox[];
   nodes: BubbleNode[];
   links: { source: BubbleNode; target: BubbleNode; color: string }[];
@@ -92,6 +94,12 @@ export function wrapToWidth(text: string, maxWidth: number, fontSize: number): s
 
 const headerHeight = (titleLines: number) =>
   LAYOUT.titleTop + titleLines * LAYOUT.titleLead + LAYOUT.metaGap + LAYOUT.headerPad;
+
+/** What a bubble is labelled with: the school for an umbrella's children. */
+export function bubbleLabel(goal: Goal): string {
+  if (goal.parent) return schoolLabel(goal.schools[0]);
+  return goal.shortTitle ?? goal.title;
+}
 
 /** Which goals are drawn, given the current expand/collapse state. */
 export function visibleGoals(expanded: Set<string>): Goal[] {
@@ -348,7 +356,15 @@ export function buildLayout(options: BuildOptions): MapLayout {
     sim.stop();
   }
 
-  return { width, height, scale, regions, nodes, links };
+  return {
+    width,
+    height,
+    scale,
+    labelFontSize: chooseLabelSize(nodes),
+    regions,
+    nodes,
+    links,
+  };
 }
 
 /** Keep every bubble inside its own region. Applied after each tick. */
@@ -425,38 +441,42 @@ function wrapAt(
   return { lines, truncated: false };
 }
 
-/**
- * Pick a font size that actually fits the bubble.
- *
- * Starting from the size the radius suggests, this walks downward and keeps the
- * candidate with the best trade-off between line count and legibility — a label
- * broken one-word-per-line reads far worse than the same label a point smaller
- * on two lines. Only when nothing fits, even at the floor, does it ellipsize.
- */
-export function fitLabel(
+/** Wrap a label at a fixed size, ellipsizing anything that overflows. */
+export function wrapLabel(
   text: string,
   r: number,
+  fontSize: number,
   reserveLines = 0,
-): { fontSize: number; lines: string[] } {
-  const start = fontSizeFor(r);
-  const floor = Math.min(start, 8);
-  const longestWord = Math.max(...text.split(/\s+/).map((w) => w.length));
+): string[] {
+  return wrapAt(text, r, fontSize, reserveLines).lines;
+}
 
-  let best: { fontSize: number; lines: string[]; score: number } | null = null;
+/**
+ * One font size for every bubble on the map.
+ *
+ * Uniform text reads as a single system, so rather than sizing each bubble
+ * independently this picks the largest size that fits the great majority of
+ * labels outright, and lets the few genuinely long ones ellipsize.
+ */
+function chooseLabelSize(nodes: BubbleNode[]): number {
+  const FLOOR = 8;
+  if (!nodes.length) return FLOOR;
 
-  for (let fs = start; fs >= floor - 0.001; fs -= 0.5) {
-    // A word wider than the line box would spill past the circle's edge.
-    if (maxCharsFor(r, fs) < longestWord) continue;
+  const start = Math.max(...nodes.map((n) => fontSizeFor(n.r)));
+  const target = Math.ceil(nodes.length * 0.85);
 
-    const { lines, truncated } = wrapAt(text, r, fs, reserveLines);
-    if (truncated) continue;
-
-    const score = lines.length * 2 + (start - fs) * 0.35;
-    if (!best || score < best.score) best = { fontSize: fs, lines, score };
+  for (let fs = start; fs >= FLOOR - 0.001; fs -= 0.5) {
+    let fitting = 0;
+    for (const node of nodes) {
+      const label = bubbleLabel(node.goal);
+      const reserve = !node.goal.parent && node.goal.kind === 'school' ? 1 : 0;
+      const longestWord = Math.max(...label.split(/\s+/).map((w) => w.length));
+      if (maxCharsFor(node.r, fs) < longestWord) continue;
+      if (!wrapAt(label, node.r, fs, reserve).truncated) fitting++;
+    }
+    if (fitting >= target) return fs;
   }
-
-  if (best) return { fontSize: best.fontSize, lines: best.lines };
-  return { fontSize: floor, ...wrapAt(text, r, floor, reserveLines) };
+  return FLOOR;
 }
 
 function fontSizeFor(r: number): number {
@@ -467,7 +487,8 @@ function fontSizeFor(r: number): number {
   return 9.5;
 }
 
-export function hexToRgba(hex: string, alpha: number): string {
+export function hexToRgba(hex: string | undefined, alpha: number): string {
+  if (!hex) return `rgba(137, 135, 129, ${alpha})`;
   const h = hex.replace('#', '');
   const n = parseInt(
     h.length === 3

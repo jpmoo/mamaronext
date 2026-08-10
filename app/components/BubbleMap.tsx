@@ -1,15 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { schoolAbbr, schoolLabel, type Goal } from '@/lib/goals';
+import { schoolAbbr, type Goal } from '@/lib/goals';
 import type { Lens } from '@/lib/lenses';
 import {
   LAYOUT,
   buildLayout,
   clampNodes,
   createSimulation,
-  fitLabel,
+  bubbleLabel,
   hexToRgba,
+  wrapLabel,
   type BubbleNode,
   type MapLayout,
 } from '@/lib/layout';
@@ -25,12 +26,6 @@ type Props = {
   /** Bumping this re-runs the layout from scratch. */
   resetSignal: number;
 };
-
-/** Child bubbles are identified by their school; everything else by goal title. */
-function labelFor(goal: Goal): string {
-  if (goal.parent) return schoolLabel(goal.schools[0]);
-  return goal.shortTitle ?? goal.title;
-}
 
 const NEUTRAL = '#898781';
 
@@ -239,7 +234,10 @@ export default function BubbleMap({
           onMouseLeave={() => onHover(null, 0, 0)}
         >
           {layout.regions.map((region) => {
-            const tint = lens.colorMode === 'group' ? region.group.color! : NEUTRAL;
+            // Read the color off the region, not off the lens: `layout` is set
+            // in an effect, so for one render after a lens switch the new lens
+            // is paired with the previous lens's regions.
+            const tint = region.group.color ?? NEUTRAL;
             const counts = regionCounts.get(region.group.id) ?? { shown: 0, total: 0 };
             return (
               <g key={region.group.id} className="region-plate">
@@ -249,7 +247,7 @@ export default function BubbleMap({
                   width={region.w}
                   height={region.h}
                   rx={16}
-                  fill={hexToRgba(tint, lens.colorMode === 'group' ? 0.045 : 0.05)}
+                  fill={hexToRgba(tint, 0.05)}
                   stroke={hexToRgba(tint, 0.28)}
                   strokeWidth={1}
                 />
@@ -314,9 +312,10 @@ export default function BubbleMap({
             const isUmbrella = goal.kind === 'umbrella';
             const isOpen = isUmbrella && expanded.has(goal.id);
 
-            const label = labelFor(goal);
+            const label = bubbleLabel(goal);
             const showScope = !goal.parent && goal.kind === 'school' && node.r >= 30;
-            const { fontSize: fs, lines } = fitLabel(label, node.r, showScope ? 1 : 0);
+            const fs = layout.labelFontSize;
+            const lines = wrapLabel(label, node.r, fs, showScope ? 1 : 0);
             const blockH = lines.length * fs * 1.18 + (showScope ? fs * 1.05 : 0);
             const startY = node.y - blockH / 2 + fs * 0.92;
 
