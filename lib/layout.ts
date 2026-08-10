@@ -1,0 +1,482 @@
+import {
+  forceCollide,
+  forceLink,
+  forceSimulation,
+  forceX,
+  forceY,
+  type Simulation,
+  type SimulationLinkDatum,
+  type SimulationNodeDatum,
+} from 'd3-force';
+import { GOALS, type Goal } from './goals';
+import { groupsForGoal, scorecardColor, type Lens, type LensGroup } from './lenses';
+
+export const LAYOUT = {
+  gutter: 16,
+  pad: 14,
+  minRegionH: 150,
+  minColumnW: 196,
+  narrowBreakpoint: 900,
+  titleSize: 14,
+  titleLead: 17,
+  titleTop: 21,
+  metaGap: 15,
+  headerPad: 10,
+};
+
+export type BubbleNode = SimulationNodeDatum & {
+  /** Unique per drawn bubble: a goal can appear in several regions at once. */
+  key: string;
+  goal: Goal;
+  group: string;
+  color: string;
+  r: number;
+  x: number;
+  y: number;
+  /** Region center, the target of the positioning forces. */
+  cx: number;
+  cy: number;
+  /** Region interior, clamped against on every tick. */
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+};
+
+export type RegionBox = {
+  group: LensGroup;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  count: number;
+  titleLines: string[];
+  titleH: number;
+};
+
+export type MapLayout = {
+  width: number;
+  height: number;
+  scale: number;
+  regions: RegionBox[];
+  nodes: BubbleNode[];
+  links: { source: BubbleNode; target: BubbleNode; color: string }[];
+};
+
+/**
+ * Every goal draws at the same size. The only exception is a school goal that
+ * hangs off an umbrella, which is smaller to read as part of its parent.
+ */
+export function radiusFor(goal: Goal): number {
+  return goal.parent ? 34 : 50;
+}
+
+const area = (r: number) => Math.PI * r * r;
+
+/** Greedy wrap against a pixel width, using an average glyph-width estimate. */
+export function wrapToWidth(text: string, maxWidth: number, fontSize: number): string[] {
+  const maxChars = Math.max(8, Math.floor(maxWidth / (fontSize * 0.55)));
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(/\s+/)) {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length <= maxChars) line = next;
+    else {
+      if (line) lines.push(line);
+      line = word;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+const headerHeight = (titleLines: number) =>
+  LAYOUT.titleTop + titleLines * LAYOUT.titleLead + LAYOUT.metaGap + LAYOUT.headerPad;
+
+/** Which goals are drawn, given the current expand/collapse state. */
+export function visibleGoals(expanded: Set<string>): Goal[] {
+  return GOALS.filter((g) => !g.parent || expanded.has(g.parent));
+}
+
+type Weighted = { group: LensGroup; count: number; weight: number };
+
+function weigh(lens: Lens, goals: Goal[]): Weighted[] {
+  return lens.groups.map((group) => {
+    const members = goals.filter((g) => groupsForGoal(lens, g).includes(group.id));
+    return {
+      group,
+      count: members.length,
+      weight: members.reduce((s, g) => s + area(radiusFor(g)), 0),
+    };
+  });
+}
+
+/** Split one axis proportionally to weight, with a floor, summing exactly. */
+function split(items: Weighted[], total: number, min: number): number[] {
+  const totalWeight = items.reduce((s, r) => s + r.weight, 0);
+  const usable = total - LAYOUT.gutter * (items.length - 1);
+  let sizes = items.map((r) => Math.max(min, (r.weight / totalWeight) * usable));
+  const sum = sizes.reduce((s, v) => s + v, 0);
+  if (sum !== usable) sizes = sizes.map((v) => (v * usable) / sum);
+  return sizes;
+}
+
+function finishRegion(
+  w: Weighted,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): RegionBox {
+  const titleLines = wrapToWidth(w.group.title, width - 34 - LAYOUT.pad, LAYOUT.titleSize);
+  return {
+    group: w.group,
+    x,
+    y,
+    w: width,
+    h: height,
+    count: w.count,
+    titleLines,
+    titleH: headerHeight(titleLines.length),
+  };
+}
+
+/**
+ * Choose a grid width that wastes no cells if it can, and otherwise keeps cells
+ * from getting too letter-boxed. Twelve regions on a wide screen want 4×3, not
+ * 5×3 with three cells stranded empty.
+ */
+function bestColumnCount(count: number, width: number, height: number): number {
+  const targetAspect = 1.3;
+  let best = 2;
+  let bestScore = Infinity;
+  for (let cols = 2; cols <= Math.min(6, count); cols++) {
+    const rows = Math.ceil(count / cols);
+    const empty = cols * rows - count;
+    const cellW = (width - LAYOUT.gutter * (cols - 1)) / cols;
+    const cellH = (height - LAYOUT.gutter * (rows - 1)) / rows;
+    const score = empty * 1.5 + Math.abs(cellW / cellH - targetAspect);
+    if (score < bestScore) {
+      bestScore = score;
+      best = cols;
+    }
+  }
+  return best;
+}
+
+/**
+ * Region layout. Four groups or fewer get proportional columns (or rows when
+ * narrow), which reads best for the initiative-style views. More than four —
+ * the data-points view — fall back to an even grid.
+ */
+function computeRegions(
+  width: number,
+  height: number,
+  lens: Lens,
+  goals: Goal[],
+): RegionBox[] {
+  // A lens group with nothing in it (e.g. "Other" once everything is filed
+  // elsewhere) would just be a blank plate, so it doesn't get drawn.
+  const weights = weigh(lens, goals).filter((w) => w.count > 0);
+  const narrow = width < LAYOUT.narrowBreakpoint;
+
+  if (weights.length === 0) return [];
+
+  if (weights.length <= 4) {
+    if (narrow) {
+      const heights = split(weights, height, LAYOUT.minRegionH);
+      let y = 0;
+      return weights.map((w, i) => {
+        const h = i === weights.length - 1 ? height - y : Math.round(heights[i]);
+        const box = finishRegion(w, 0, y, width, h);
+        y += h + LAYOUT.gutter;
+        return box;
+      });
+    }
+    const widths = split(weights, width, LAYOUT.minColumnW);
+    let x = 0;
+    return weights.map((w, i) => {
+      const cw = i === weights.length - 1 ? width - x : Math.round(widths[i]);
+      const box = finishRegion(w, x, 0, cw, height);
+      x += cw + LAYOUT.gutter;
+      return box;
+    });
+  }
+
+  const cols = narrow ? (width < 620 ? 1 : 2) : bestColumnCount(weights.length, width, height);
+  const rows = Math.ceil(weights.length / cols);
+  const cellW = (width - LAYOUT.gutter * (cols - 1)) / cols;
+  const cellH = (height - LAYOUT.gutter * (rows - 1)) / rows;
+
+  return weights.map((w, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    return finishRegion(
+      w,
+      Math.round(col * (cellW + LAYOUT.gutter)),
+      Math.round(row * (cellH + LAYOUT.gutter)),
+      Math.round(cellW),
+      Math.round(cellH),
+    );
+  });
+}
+
+/**
+ * One scale factor for every bubble, chosen so the tightest region still fits
+ * its largest bubble and its total bubble area. Scaling globally rather than per
+ * region keeps size comparable across the map, so size still reads as "how big
+ * a goal is". Allowed above 1 so a tall window grows the bubbles instead of
+ * stranding whitespace, and floored so a cramped one stays readable.
+ */
+function computeScale(regions: RegionBox[], lens: Lens, goals: Goal[]): number {
+  let scale = Infinity;
+  for (const region of regions) {
+    const members = goals.filter((g) => groupsForGoal(lens, g).includes(region.group.id));
+    if (!members.length) continue;
+
+    const maxR = Math.max(...members.map(radiusFor));
+    const innerW = Math.max(1, region.w - LAYOUT.pad * 2);
+    const innerH = Math.max(1, region.h - region.titleH - LAYOUT.pad * 2);
+    const needed = members.reduce((s, g) => s + area(radiusFor(g)), 0) / 0.5;
+
+    scale = Math.min(
+      scale,
+      innerH / (2 * maxR),
+      innerW / (2 * maxR),
+      Math.sqrt((innerW * innerH) / needed),
+    );
+  }
+  return Math.max(0.42, Math.min(1.45, scale));
+}
+
+export type BuildOptions = {
+  width: number;
+  height: number;
+  lens: Lens;
+  expanded: Set<string>;
+  /**
+   * Positions to carry over, so expanding a group doesn't reshuffle the map.
+   * `pinned` marks bubbles the user has dragged, which stay put.
+   */
+  previous?: Map<string, { x: number; y: number; pinned: boolean }>;
+  /** Ticks to settle before returning. 0 keeps seeded positions for animation. */
+  settleTicks?: number;
+};
+
+export function buildLayout(options: BuildOptions): MapLayout {
+  const { width, height, lens, expanded, previous, settleTicks = 500 } = options;
+  const goals = visibleGoals(expanded);
+  const regions = computeRegions(width, height, lens, goals);
+  const scale = computeScale(regions, lens, goals);
+
+  const nodes: BubbleNode[] = [];
+
+  for (const region of regions) {
+    const members = goals.filter((g) => groupsForGoal(lens, g).includes(region.group.id));
+    const innerTop = region.y + region.titleH;
+    const cx = region.x + region.w / 2;
+    const cy = (innerTop + region.y + region.h) / 2;
+    const color = lens.colorMode === 'group' ? region.group.color! : undefined;
+
+    members.forEach((goal, i) => {
+      const key = `${goal.id}::${region.group.id}`;
+      const r = radiusFor(goal) * scale;
+
+      // Seed on a phyllotaxis spiral — distinct, deterministic starting points,
+      // so no force ever needs to jiggle and repeat runs match.
+      const angle = i * 2.399963;
+      const spread = 14 * Math.sqrt(i + 0.5);
+      let x = cx + spread * Math.cos(angle);
+      let y = cy + spread * Math.sin(angle);
+
+      const carried = previous?.get(key);
+      if (carried) {
+        x = carried.x;
+        y = carried.y;
+      } else if (goal.parent) {
+        // A child popping out of its umbrella starts at the umbrella, nudged
+        // just enough for the collision force to push it clear.
+        const parentAt = previous?.get(`${goal.parent}::${region.group.id}`);
+        if (parentAt) {
+          x = parentAt.x + Math.cos(angle) * 6;
+          y = parentAt.y + Math.sin(angle) * 6;
+        }
+      }
+
+      const node: BubbleNode = {
+        key,
+        goal,
+        group: region.group.id,
+        color: color ?? scorecardColor(goal),
+        r,
+        x,
+        y,
+        cx,
+        cy,
+        minX: region.x + LAYOUT.pad,
+        maxX: region.x + region.w - LAYOUT.pad,
+        minY: innerTop,
+        maxY: region.y + region.h - LAYOUT.pad,
+      };
+
+      if (carried?.pinned) {
+        node.fx = x;
+        node.fy = y;
+      }
+
+      nodes.push(node);
+    });
+  }
+
+  const byKey = new Map(nodes.map((n) => [n.key, n]));
+  const links: MapLayout['links'] = [];
+  for (const node of nodes) {
+    const parentId = node.goal.parent;
+    if (!parentId) continue;
+    const parent = byKey.get(`${parentId}::${node.group}`);
+    // Only linked when both land in the same region — under some lenses a child
+    // and its umbrella are filed apart, and a line across regions would mislead.
+    if (parent) links.push({ source: parent, target: node, color: node.color });
+  }
+
+  if (settleTicks > 0) {
+    const sim = createSimulation(nodes, links);
+    for (let i = 0; i < settleTicks; i++) {
+      sim.tick();
+      clampNodes(nodes);
+    }
+    sim.stop();
+  }
+
+  return { width, height, scale, regions, nodes, links };
+}
+
+/** Keep every bubble inside its own region. Applied after each tick. */
+export function clampNodes(nodes: BubbleNode[]): void {
+  for (const n of nodes) {
+    const x = Math.min(n.maxX - n.r, Math.max(n.minX + n.r, n.x));
+    const y = Math.min(n.maxY - n.r, Math.max(n.minY + n.r, n.y));
+    n.x = x;
+    n.y = y;
+    // A pinned node is held at fx/fy every tick, so the clamp has to move the
+    // pin too — otherwise it would fight the bounds forever.
+    if (n.fx != null) n.fx = x;
+    if (n.fy != null) n.fy = y;
+  }
+}
+
+export function createSimulation(
+  nodes: BubbleNode[],
+  links: MapLayout['links'],
+): Simulation<BubbleNode, SimulationLinkDatum<BubbleNode>> {
+  const sim = forceSimulation(nodes)
+    .force('collide', forceCollide<BubbleNode>((d) => d.r + 7).strength(0.92).iterations(3))
+    .force('x', forceX<BubbleNode>((d) => d.cx).strength(0.055))
+    .force('y', forceY<BubbleNode>((d) => d.cy).strength(0.055))
+    .stop();
+
+  if (links.length) {
+    sim.force(
+      'link',
+      forceLink<BubbleNode, SimulationLinkDatum<BubbleNode>>(
+        links.map((l) => ({ source: l.source, target: l.target })),
+      )
+        .distance((l) => (l.source as BubbleNode).r + (l.target as BubbleNode).r + 16)
+        .strength(0.55),
+    );
+  }
+
+  return sim;
+}
+
+const maxCharsFor = (r: number, fontSize: number) =>
+  Math.max(4, Math.floor((r * 1.62) / (fontSize * 0.53)));
+
+const maxLinesFor = (r: number, fontSize: number, reserveLines: number) =>
+  Math.max(1, Math.min(5, Math.max(2, Math.floor((r * 1.5) / (fontSize * 1.18)))) - reserveLines);
+
+/** Greedy word wrap at a given size, reporting whether it had to cut text. */
+function wrapAt(
+  text: string,
+  r: number,
+  fontSize: number,
+  reserveLines: number,
+): { lines: string[]; truncated: boolean } {
+  const maxChars = maxCharsFor(r, fontSize);
+  const maxLines = maxLinesFor(r, fontSize, reserveLines);
+
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(/\s+/)) {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length <= maxChars) line = next;
+    else {
+      if (line) lines.push(line);
+      line = word;
+    }
+  }
+  if (line) lines.push(line);
+
+  if (lines.length > maxLines) {
+    const kept = lines.slice(0, maxLines);
+    kept[maxLines - 1] = `${kept[maxLines - 1].replace(/[\s,;:]+$/, '')}…`;
+    return { lines: kept, truncated: true };
+  }
+  return { lines, truncated: false };
+}
+
+/**
+ * Pick a font size that actually fits the bubble.
+ *
+ * Starting from the size the radius suggests, this walks downward and keeps the
+ * candidate with the best trade-off between line count and legibility — a label
+ * broken one-word-per-line reads far worse than the same label a point smaller
+ * on two lines. Only when nothing fits, even at the floor, does it ellipsize.
+ */
+export function fitLabel(
+  text: string,
+  r: number,
+  reserveLines = 0,
+): { fontSize: number; lines: string[] } {
+  const start = fontSizeFor(r);
+  const floor = Math.min(start, 8);
+  const longestWord = Math.max(...text.split(/\s+/).map((w) => w.length));
+
+  let best: { fontSize: number; lines: string[]; score: number } | null = null;
+
+  for (let fs = start; fs >= floor - 0.001; fs -= 0.5) {
+    // A word wider than the line box would spill past the circle's edge.
+    if (maxCharsFor(r, fs) < longestWord) continue;
+
+    const { lines, truncated } = wrapAt(text, r, fs, reserveLines);
+    if (truncated) continue;
+
+    const score = lines.length * 2 + (start - fs) * 0.35;
+    if (!best || score < best.score) best = { fontSize: fs, lines, score };
+  }
+
+  if (best) return { fontSize: best.fontSize, lines: best.lines };
+  return { fontSize: floor, ...wrapAt(text, r, floor, reserveLines) };
+}
+
+function fontSizeFor(r: number): number {
+  if (r >= 56) return 13.5;
+  if (r >= 48) return 12.5;
+  if (r >= 40) return 11.5;
+  if (r >= 32) return 10.5;
+  return 9.5;
+}
+
+export function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const n = parseInt(
+    h.length === 3
+      ? h
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : h,
+    16,
+  );
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}

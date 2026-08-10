@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.next-build/
+next-env.d.ts
+tsconfig.tsbuildinfo
+.DS_Store
+
+# Source documents the app was transcribed from. The transcription itself lives
+# in lib/goals.ts; the originals stay out of the public repo.
+resources/
