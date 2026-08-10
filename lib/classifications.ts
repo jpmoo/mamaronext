@@ -162,12 +162,6 @@ export const DATA_POINTS: { key: string; label: string; blurb: string }[] = [
     label: 'Survey & sentiment data',
     blurb: 'Community and staff feedback, trust surveys, and retention data.',
   },
-  {
-    key: 'activities',
-    label: 'Activities Completed',
-    blurb:
-      'Progress shown by completing the planned work itself, rather than by a separate data instrument.',
-  },
 ];
 
 export const CLASSIFICATIONS: Record<string, Classification> = {
@@ -204,7 +198,7 @@ export const CLASSIFICATIONS: Record<string, Classification> = {
   'budgeting-transparency': {
     theme: 'mentorship',
     scorecard: 'rii',
-    dataPoints: ['activities'],
+    dataPoints: ['sentiment'],
     boeFocus: ['community'],
   },
   'elementary-literacy': {
