@@ -51,7 +51,7 @@ const classify = (goal: Goal) => CLASSIFICATIONS[goal.id];
 export const LENSES: Lens[] = [
   {
     id: 'themes',
-    label: 'Strategic framework',
+    label: 'Strategic framework areas',
     colorMode: 'group',
     groups: THEMES.map((t, i) => ({
       id: t.key,
