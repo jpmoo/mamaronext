@@ -263,7 +263,7 @@ export default function Explorer() {
       </div>
 
       <div className="legend">
-        <span className="legend-note">Colored by kind of work:</span>
+        <span className="legend-note">Colored by strategic framework area</span>
         {THEME_LEGEND.map((t) => (
           <span className="item" key={t.id} title={t.blurb}>
             <span className="swatch" style={{ background: t.color }} />
