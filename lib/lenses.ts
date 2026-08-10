@@ -6,6 +6,7 @@
  */
 
 import {
+  BOE_FOCUS,
   CLASSIFICATIONS,
   DATA_POINTS,
   SCORECARD_BUCKETS,
@@ -81,6 +82,16 @@ export const LENSES: Lens[] = [
       color: PALETTE[i],
     })),
     groupsFor: (goal) => [goal.initiative],
+  },
+  {
+    id: 'boe-focus',
+    label: 'Board of Education focus areas',
+    colorMode: 'scorecard',
+    groups: BOE_FOCUS.map((f) => ({ id: f.key, title: f.label, blurb: f.blurb })),
+    groupsFor: (goal) => {
+      const focus = classify(goal)?.boeFocus;
+      return focus && focus.length ? focus : [UNCLASSIFIED];
+    },
   },
   {
     id: 'data-points',

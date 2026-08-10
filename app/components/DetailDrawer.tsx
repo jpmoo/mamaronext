@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import {
+  BOE_FOCUS,
   CLASSIFICATIONS,
   DATA_POINTS,
   SCORECARD_BUCKETS,
@@ -39,8 +40,18 @@ export default function DetailDrawer({ goal, onClose, onNavigate }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
+    // Pointerdown, not click: bubbles activate on pointerup, so this closes
+    // first and a click on another bubble still opens that one.
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (target && !document.querySelector('.drawer')?.contains(target)) onClose();
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
   }, [onClose]);
 
   const cls = CLASSIFICATIONS[goal.id];
@@ -48,6 +59,9 @@ export default function DetailDrawer({ goal, onClose, onNavigate }: Props) {
   const bucket = SCORECARD_BUCKETS.find((b) => b.key === cls?.scorecard);
   const points = (cls?.dataPoints ?? [])
     .map((key) => DATA_POINTS.find((d) => d.key === key))
+    .filter(Boolean);
+  const focus = (cls?.boeFocus ?? [])
+    .map((key) => BOE_FOCUS.find((f) => f.key === key))
     .filter(Boolean);
   const appliesTo = goal.schools.filter((s) => s !== 'district');
 
@@ -81,6 +95,16 @@ export default function DetailDrawer({ goal, onClose, onNavigate }: Props) {
               </span>
             )}
           </div>
+          {focus.length > 0 && (
+            <div className="tagrow tagrow--data">
+              <span className="tagrow-label">BoE focus</span>
+              {focus.map((f) => (
+                <span className="tag" key={f!.key} title={f!.blurb}>
+                  {f!.label}
+                </span>
+              ))}
+            </div>
+          )}
           {points.length > 0 && (
             <div className="tagrow tagrow--data">
               <span className="tagrow-label">Data points</span>

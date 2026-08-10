@@ -10,6 +10,7 @@
  * - `theme`      one of personalization | mentorship | expertise
  * - `scorecard`  one of esl | adb | aeg | rii  (see resources/Scorecard.jpg)
  * - `dataPoints` every named data source the goal's plan or measure touches
+ * - `boeFocus`   the Board of Education focus area(s) a goal pulls on
  */
 
 export type ThemeKey = 'personalization' | 'mentorship' | 'expertise';
@@ -19,7 +20,42 @@ export type Classification = {
   theme: ThemeKey;
   scorecard: ScorecardKey;
   dataPoints: string[];
+  boeFocus: string[];
 };
+
+/**
+ * The five "threads to pull" listed under Board of Education Presentations at
+ * the end of the goals chart. Labels and sub-points are the chart's own.
+ */
+export const BOE_FOCUS: { key: string; label: string; blurb: string }[] = [
+  {
+    key: 'consistency',
+    label: 'Consistency in teaching, learning, grading',
+    blurb:
+      'Articulated curriculum maps, common assessments, and rubrics with expectations for fidelity; teaming, interdisciplinary versus disciplinary; materials.',
+  },
+  {
+    key: 'integrity',
+    label: 'Academic Integrity and Honesty',
+    blurb: 'Honest work, and the prevention and response practices around it.',
+  },
+  {
+    key: 'community',
+    label: 'Community Expectations and Standards',
+    blurb: 'Relationship and collaboration — what the district and its community expect of each other.',
+  },
+  {
+    key: 'technology',
+    label: 'Technology',
+    blurb: 'Changes as they occur toward fulfillment of the technology playbook.',
+  },
+  {
+    key: 'empowerment',
+    label: 'Personalization toward Empowerment',
+    blurb:
+      'Pathways are both academic and outside the classroom — co- and extra-curricular involvement, and engaging students through their own skills and interests.',
+  },
+];
 
 export const THEMES: { key: ThemeKey; label: string; blurb: string }[] = [
   {
@@ -139,140 +175,168 @@ export const CLASSIFICATIONS: Record<string, Classification> = {
     theme: 'expertise',
     scorecard: 'esl',
     dataPoints: ['common-assessments', 'grades'],
+    boeFocus: ['consistency'],
   },
   'k5-science': {
     theme: 'expertise',
     scorecard: 'esl',
     dataPoints: ['common-assessments', 'external-exams'],
+    boeFocus: ['consistency'],
   },
   'k12-writing': {
     theme: 'expertise',
     scorecard: 'esl',
     dataPoints: ['common-assessments', 'observation'],
+    boeFocus: ['consistency'],
   },
   'k12-pe': {
     theme: 'expertise',
     scorecard: 'aeg',
     dataPoints: ['common-assessments', 'grades'],
+    boeFocus: ['consistency'],
   },
   'goal-setting-framework': {
     theme: 'expertise',
     scorecard: 'rii',
     dataPoints: ['team-practice'],
+    boeFocus: ['community'],
   },
   'budgeting-transparency': {
     theme: 'mentorship',
     scorecard: 'rii',
     dataPoints: ['activities'],
+    boeFocus: ['community'],
   },
   'elementary-literacy': {
     theme: 'personalization',
     scorecard: 'esl',
     dataPoints: ['screening'],
+    boeFocus: ['empowerment'],
   },
   'literacy-central': {
     theme: 'personalization',
     scorecard: 'esl',
     dataPoints: ['screening', 'team-practice'],
+    boeFocus: ['empowerment'],
   },
   'literacy-chatsworth': {
     theme: 'personalization',
     scorecard: 'esl',
     dataPoints: ['screening'],
+    boeFocus: ['empowerment'],
   },
   'literacy-mamaroneck-ave': {
     theme: 'personalization',
     scorecard: 'esl',
     dataPoints: ['screening', 'observation'],
+    boeFocus: ['empowerment'],
   },
   'literacy-murray': {
     theme: 'personalization',
     scorecard: 'esl',
     dataPoints: ['screening'],
+    boeFocus: ['empowerment'],
   },
   'data-literacy-hommocks': {
     theme: 'expertise',
     scorecard: 'rii',
     dataPoints: ['grades', 'team-practice'],
+    boeFocus: ['consistency'],
   },
   'attendance-mhs': {
     theme: 'mentorship',
     scorecard: 'adb',
     dataPoints: ['attendance'],
+    boeFocus: ['community'],
   },
   'instructional-coaching': {
     theme: 'mentorship',
     scorecard: 'aeg',
     dataPoints: ['observation', 'sentiment'],
+    boeFocus: ['consistency'],
   },
   'science-of-learning': {
     theme: 'expertise',
     scorecard: 'aeg',
     dataPoints: ['observation'],
+    boeFocus: ['consistency'],
   },
   avid: {
     theme: 'expertise',
     scorecard: 'aeg',
     dataPoints: ['observation'],
+    boeFocus: ['consistency'],
   },
   'technology-plan': {
     theme: 'expertise',
     scorecard: 'aeg',
     dataPoints: ['observation'],
+    boeFocus: ['technology'],
   },
   'network-participation': {
     theme: 'expertise',
     scorecard: 'aeg',
     dataPoints: ['participation'],
+    boeFocus: ['community'],
   },
   'ell-sheltered': {
     theme: 'expertise',
     scorecard: 'esl',
     dataPoints: ['external-exams', 'common-assessments'],
+    boeFocus: ['consistency'],
   },
   'students-of-promise': {
     theme: 'personalization',
     scorecard: 'esl',
     dataPoints: ['participation'],
+    boeFocus: ['empowerment'],
   },
   'psat-gaps': {
     theme: 'personalization',
     scorecard: 'esl',
     dataPoints: ['external-exams', 'common-assessments'],
+    boeFocus: ['empowerment'],
   },
   'hs-pathways': {
     theme: 'personalization',
     scorecard: 'esl',
     dataPoints: ['participation'],
+    boeFocus: ['empowerment'],
   },
   'ms-pathways': {
     theme: 'personalization',
     scorecard: 'esl',
     dataPoints: ['participation'],
+    boeFocus: ['empowerment'],
   },
   'dasa-response': {
     theme: 'mentorship',
     scorecard: 'adb',
     dataPoints: ['discipline'],
+    boeFocus: ['community'],
   },
   'labor-relations': {
     theme: 'mentorship',
     scorecard: 'adb',
     dataPoints: ['sentiment'],
+    boeFocus: ['community'],
   },
   'strategic-communication': {
     theme: 'mentorship',
     scorecard: 'adb',
     dataPoints: ['sentiment'],
+    boeFocus: ['community'],
   },
   'discipline-recidivism': {
     theme: 'mentorship',
     scorecard: 'adb',
     dataPoints: ['discipline'],
+    boeFocus: ['community'],
   },
   'academic-dishonesty': {
     theme: 'mentorship',
     scorecard: 'adb',
     dataPoints: ['discipline'],
+    boeFocus: ['integrity', 'technology'],
   },
 };
