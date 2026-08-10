@@ -348,12 +348,19 @@ export function buildLayout(options: BuildOptions): MapLayout {
   }
 
   if (settleTicks > 0) {
-    const sim = createSimulation(nodes, links);
-    for (let i = 0; i < settleTicks; i++) {
-      sim.tick();
-      clampNodes(nodes);
+    // Settle each region on its own. Regions never overlap and every bubble is
+    // clamped to its own box, so a shared simulation would only let collisions
+    // leak across region boundaries.
+    for (const region of regions) {
+      const groupNodes = nodes.filter((n) => n.group === region.group.id);
+      const groupLinks = links.filter((l) => l.source.group === region.group.id);
+      const sim = createSimulation(groupNodes, groupLinks);
+      for (let i = 0; i < settleTicks; i++) {
+        sim.tick();
+        clampNodes(groupNodes);
+      }
+      sim.stop();
     }
-    sim.stop();
   }
 
   return {
@@ -485,6 +492,30 @@ function fontSizeFor(r: number): number {
   if (r >= 40) return 11.5;
   if (r >= 32) return 10.5;
   return 9.5;
+}
+
+/**
+ * The page background, mirroring `--page` in globals.css. Needed in JS because
+ * bubbles are drawn over a translucent region plate: to hide the link lines
+ * behind them, each bubble needs an opaque disc of exactly the color it is
+ * sitting on.
+ */
+export const PAGE_BG = '#f4f2ef';
+
+const parseHex = (hex: string): [number, number, number] => {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+
+/** Flatten `fg` at `alpha` over `bg` into an opaque color. */
+export function blend(bg: string, fg: string | undefined, alpha: number): string {
+  if (!fg) return bg;
+  const [br, bgg, bb] = parseHex(bg);
+  const [fr, fg2, fb] = parseHex(fg);
+  const mix = (b: number, f: number) => Math.round(b * (1 - alpha) + f * alpha);
+  return `rgb(${mix(br, fr)}, ${mix(bgg, fg2)}, ${mix(bb, fb)})`;
 }
 
 export function hexToRgba(hex: string | undefined, alpha: number): string {

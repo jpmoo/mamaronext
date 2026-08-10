@@ -998,10 +998,23 @@ table.goals tr:hover .clamp {
   /* Deliberately NOT `break-inside: avoid` on rows. Some goals are half a page
      tall, and refusing to split them strands most of a page each time — which
      is what turned five pages of content into ten, most of them near-empty.
-     Only the short bucket heading avoids being orphaned. */
+     `break-after: avoid` on the bucket heading is left off for the same reason:
+     when the row after it is tall, Chrome will emit empty pages trying to keep
+     the pair together. Only the short heading itself resists splitting. */
   tr.bucket-head {
     break-inside: avoid;
-    break-after: avoid;
+  }
+
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+  }
+
+  /* Animations mid-print can leave elements measured at a transient size. */
+  * {
+    animation: none !important;
+    transition: none !important;
   }
 
   table.goals th,

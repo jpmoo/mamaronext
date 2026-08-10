@@ -53,7 +53,7 @@ export type Goal = {
 };
 
 export const SCHOOLS: { key: string; label: string; short: string; abbr: string }[] = [
-  { key: 'district', label: 'District-Wide', short: 'District', abbr: 'District' },
+  { key: 'district', label: 'District-Wide', short: 'District-Wide', abbr: 'District-Wide' },
   { key: 'central', label: 'Central Elementary', short: 'Central', abbr: 'Central' },
   {
     key: 'chatsworth',
@@ -254,7 +254,7 @@ export const GOALS: Goal[] = [
     title: 'Elementary Literacy achievement',
     kind: 'umbrella',
     scope: 'Four elementary schools',
-    schools: ['central', 'chatsworth', 'mamaroneck-ave', 'murray'],
+    schools: ['district', 'central', 'chatsworth', 'mamaroneck-ave', 'murray'],
     condition:
       'A shared literacy goal carried by each of the four elementary schools, with a distinct condition, plan, and measure at each building.',
   },

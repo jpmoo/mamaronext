@@ -8,6 +8,8 @@ import {
   buildLayout,
   clampNodes,
   createSimulation,
+  PAGE_BG,
+  blend,
   bubbleLabel,
   hexToRgba,
   wrapLabel,
@@ -42,9 +44,17 @@ export default function BubbleMap({
   const frameRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const nodesRef = useRef<BubbleNode[]>([]);
-  const simRef = useRef<ReturnType<typeof createSimulation> | null>(null);
-  const dragRef = useRef<{ node: BubbleNode; moved: boolean } | null>(null);
+  // One simulation per region. Regions are independent — dragging or expanding
+  // inside one must not stir the others.
+  const simsRef = useRef<Map<string, ReturnType<typeof createSimulation>>>(new Map());
+  const dragRef = useRef<{
+    node: BubbleNode;
+    moved: boolean;
+    sim?: ReturnType<typeof createSimulation>;
+    groupNodes: BubbleNode[];
+  } | null>(null);
   const previousBuild = useRef<string>('');
+  const previousKeys = useRef<Map<string, Set<string>>>(new Map());
 
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [layout, setLayout] = useState<MapLayout | null>(null);
@@ -109,18 +119,43 @@ export default function BubbleMap({
     nodesRef.current = next.nodes;
     setLayout(next);
 
-    simRef.current?.stop();
-    const sim = createSimulation(next.nodes, next.links);
-    sim.on('tick', () => {
-      clampNodes(next.nodes);
-      setFrame((f) => f + 1);
-    });
-    simRef.current = sim;
+    for (const sim of simsRef.current.values()) sim.stop();
 
-    if (incremental) sim.alpha(0.55).restart();
+    const keysByGroup = new Map<string, Set<string>>();
+    for (const node of next.nodes) {
+      if (!keysByGroup.has(node.group)) keysByGroup.set(node.group, new Set());
+      keysByGroup.get(node.group)!.add(node.key);
+    }
+
+    const sims = new Map<string, ReturnType<typeof createSimulation>>();
+    for (const region of next.regions) {
+      const id = region.group.id;
+      const groupNodes = next.nodes.filter((n) => n.group === id);
+      const groupLinks = next.links.filter((l) => l.source.group === id);
+
+      const sim = createSimulation(groupNodes, groupLinks);
+      sim.on('tick', () => {
+        clampNodes(groupNodes);
+        setFrame((f) => f + 1);
+      });
+      sims.set(id, sim);
+
+      // Only reheat a region whose membership actually changed — expanding an
+      // umbrella shouldn't nudge bubbles in any other bucket.
+      if (incremental) {
+        const before = previousKeys.current.get(id);
+        const after = keysByGroup.get(id)!;
+        const changed =
+          !before || before.size !== after.size || [...after].some((k) => !before.has(k));
+        if (changed) sim.alpha(0.55).restart();
+      }
+    }
+
+    previousKeys.current = keysByGroup;
+    simsRef.current = sims;
 
     return () => {
-      sim.stop();
+      for (const sim of sims.values()) sim.stop();
     };
     // `expanded` is covered by expandedKey.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,10 +185,16 @@ export default function BubbleMap({
     } catch {
       // Pointer capture is a nicety; dragging still works without it.
     }
-    dragRef.current = { node, moved: false };
+    const sim = simsRef.current.get(node.group);
+    dragRef.current = {
+      node,
+      moved: false,
+      sim,
+      groupNodes: nodesRef.current.filter((n) => n.group === node.group),
+    };
     node.fx = node.x;
     node.fy = node.y;
-    simRef.current?.alphaTarget(0.3).restart();
+    sim?.alphaTarget(0.3).restart();
   };
 
   const handlePointerMove = (e: React.PointerEvent, node: BubbleNode) => {
@@ -173,11 +214,10 @@ export default function BubbleMap({
 
     // Step and repaint from the pointer stream rather than waiting on the
     // simulation's own timer, which is requestAnimationFrame-backed and can be
-    // starved. Neighbours still get pushed aside on every move.
-    const sim = simRef.current;
-    if (sim) {
-      sim.tick();
-      clampNodes(nodesRef.current);
+    // starved. Only this bubble's own region is stepped.
+    if (drag.sim) {
+      drag.sim.tick();
+      clampNodes(drag.groupNodes);
     }
     setFrame((f) => f + 1);
   };
@@ -190,19 +230,28 @@ export default function BubbleMap({
     } catch {
       // Ignore — capture may never have been granted.
     }
-    simRef.current?.alphaTarget(0);
+    drag.sim?.alphaTarget(0);
     dragRef.current = null;
 
     if (drag.moved) {
       // Leave fx/fy set so the bubble stays where it was dropped. "Reset
       // layout" is what releases every pin.
-      simRef.current?.alpha(0.15).restart();
+      drag.sim?.alpha(0.15).restart();
     } else {
       drag.node.fx = null;
       drag.node.fy = null;
       activate(drag.node.goal);
     }
   };
+
+  // The opaque equivalent of each region's translucent plate.
+  const plateFill = useMemo(() => {
+    const fills = new Map<string, string>();
+    for (const region of layout?.regions ?? []) {
+      fills.set(region.group.id, blend(PAGE_BG, region.group.color ?? NEUTRAL, 0.05));
+    }
+    return fills;
+  }, [layout]);
 
   const regionCounts = useMemo(() => {
     const counts = new Map<string, { shown: number; total: number }>();
@@ -242,11 +291,13 @@ export default function BubbleMap({
             const counts = regionCounts.get(region.group.id) ?? { shown: 0, total: 0 };
             return (
               <g key={region.group.id} className="region-plate">
+                {/* Inset by half the stroke: regions tile edge to edge, so a
+                    centred 1px stroke would be clipped along the outer sides. */}
                 <rect
-                  x={region.x}
-                  y={region.y}
-                  width={region.w}
-                  height={region.h}
+                  x={region.x + 0.5}
+                  y={region.y + 0.5}
+                  width={region.w - 1}
+                  height={region.h - 1}
                   rx={16}
                   fill={hexToRgba(tint, 0.05)}
                   stroke={hexToRgba(tint, 0.28)}
@@ -291,14 +342,20 @@ export default function BubbleMap({
 
           {layout.links.map((link, i) => {
             const visible = isMatch(link.source.goal) && isMatch(link.target.goal);
+            // Draw only the gap between the two circles, not centre to centre.
+            const dx = link.target.x - link.source.x;
+            const dy = link.target.y - link.source.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            const ux = dx / dist;
+            const uy = dy / dist;
             return (
               <line
                 key={i}
                 className="link-line"
-                x1={link.source.x}
-                y1={link.source.y}
-                x2={link.target.x}
-                y2={link.target.y}
+                x1={link.source.x + ux * link.source.r}
+                y1={link.source.y + uy * link.source.r}
+                x2={link.target.x - ux * link.target.r}
+                y2={link.target.y - uy * link.target.r}
                 stroke={link.color}
                 strokeWidth={2}
                 opacity={visible ? 0.35 : 0.06}
@@ -348,6 +405,12 @@ export default function BubbleMap({
                 onPointerCancel={handlePointerUp}
                 onMouseLeave={() => onHover(null, 0, 0)}
               >
+                <circle
+                  cx={node.x}
+                  cy={node.y}
+                  r={node.r}
+                  fill={plateFill.get(node.group) ?? PAGE_BG}
+                />
                 <circle
                   className="body"
                   cx={node.x}
