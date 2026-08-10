@@ -7,13 +7,30 @@ import {
   SCORECARD_BUCKETS,
   THEMES,
 } from '@/lib/classifications';
-import { GOALS, initiativeById, schoolLabel, type Goal } from '@/lib/goals';
+import { GOALS, initiativeById, schoolLabel, type Goal, type PlanSegment } from '@/lib/goals';
 
 type Props = {
   goal: Goal;
   onClose: () => void;
   onNavigate: (goal: Goal) => void;
 };
+
+/** Renders a plan or measure, breaking it out per school when the goal is written that way. */
+function PlanBody({ text, segments }: { text?: string; segments?: PlanSegment[] }) {
+  if (segments && segments.length > 0) {
+    return (
+      <ul className="perschool">
+        {segments.map((segment) => (
+          <li key={segment.label}>
+            <strong>{segment.label}</strong>
+            <span>{segment.text}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  return <>{text}</>;
+}
 
 export default function DetailDrawer({ goal, onClose, onNavigate }: Props) {
   const init = initiativeById(goal.initiative);
@@ -90,11 +107,13 @@ export default function DetailDrawer({ goal, onClose, onNavigate }: Props) {
           {goal.fall && (
             <section className="semester">
               <h3>Fall Semester</h3>
-              <div className="plan">{goal.fall}</div>
+              <div className="plan">
+                <PlanBody text={goal.fall} segments={goal.bySchool?.fall} />
+              </div>
               {goal.fallProgress && (
                 <div className="measure">
                   <strong>Progress to present</strong>
-                  {goal.fallProgress}
+                  <PlanBody text={goal.fallProgress} segments={goal.bySchool?.fallProgress} />
                 </div>
               )}
             </section>
@@ -103,11 +122,13 @@ export default function DetailDrawer({ goal, onClose, onNavigate }: Props) {
           {goal.spring && (
             <section className="semester">
               <h3>Spring Semester</h3>
-              <div className="plan">{goal.spring}</div>
+              <div className="plan">
+                <PlanBody text={goal.spring} segments={goal.bySchool?.spring} />
+              </div>
               {goal.springProgress && (
                 <div className="measure">
                   <strong>Progress to present</strong>
-                  {goal.springProgress}
+                  <PlanBody text={goal.springProgress} segments={goal.bySchool?.springProgress} />
                 </div>
               )}
             </section>

@@ -18,6 +18,9 @@ export type Initiative = {
   color: string;
 };
 
+/** One school's slice of a district-wide plan, for goals written per school. */
+export type PlanSegment = { label: string; text: string };
+
 export type Goal = {
   id: string;
   initiative: string;
@@ -36,6 +39,17 @@ export type Goal = {
   fallProgress?: string;
   spring?: string;
   springProgress?: string;
+  /**
+   * Set when the chart writes a goal as separate work per school. The plain
+   * `fall`/`spring` strings stay as written so search still matches them; these
+   * are what gets displayed, so every per-school breakdown looks the same.
+   */
+  bySchool?: {
+    fall?: PlanSegment[];
+    fallProgress?: PlanSegment[];
+    spring?: PlanSegment[];
+    springProgress?: PlanSegment[];
+  };
 };
 
 export const SCHOOLS: { key: string; label: string; short: string; abbr: string }[] = [
@@ -126,6 +140,44 @@ export const GOALS: Goal[] = [
       'Elementary: review standards-level trends across grades/classrooms, focusing on summative standards, and set expectations for intervention plans; revisit performance on the same standards post-intervention at EOY. HMX: use data to identify trends by standard/skill and adjust the program, then adjust 27-28 sequencing; MHS: identify large-scale curriculum revision options/timeline to follow elementary and middle school curriculum adoptions.',
     springProgress:
       'Change in student performance on shared math standards, and whether achievement gaps by standard narrowed.',
+    bySchool: {
+      fall: [
+        {
+          label: 'Elementary',
+          text: 'Audit and adjust to ensure compliance with assessment calendar and data collection/analysis practices.',
+        },
+        {
+          label: 'Hommocks',
+          text: "Launch the new curriculum's assessment platform and establish routines for reviewing standards-level data in team/department meetings.",
+        },
+        {
+          label: 'MHS',
+          text: 'Align on classroom gradebook, homework, and assessment practices, with continued development and deployment of common assessments.',
+        },
+      ],
+      fallProgress: [
+        {
+          label: 'Elementary',
+          text: 'Assessment-calendar/data-routine compliance underway.',
+        },
+        { label: 'Hommocks', text: 'New assessment platform launched.' },
+        { label: 'MHS', text: 'Gradebook/assessment alignment begun.' },
+      ],
+      spring: [
+        {
+          label: 'Elementary',
+          text: 'Review standards-level trends across grades/classrooms, focusing on summative standards, and set expectations for intervention plans; revisit performance on the same standards post-intervention at EOY.',
+        },
+        {
+          label: 'Hommocks',
+          text: 'Use data to identify trends by standard/skill and adjust the program, then adjust 27-28 sequencing.',
+        },
+        {
+          label: 'MHS',
+          text: 'Identify large-scale curriculum revision options/timeline to follow elementary and middle school curriculum adoptions.',
+        },
+      ],
+    },
   },
   {
     id: 'k5-science',

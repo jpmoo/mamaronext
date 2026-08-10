@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import logo from '@/public/logo.png';
-import { GOALS, SCHOOLS, type Goal } from '@/lib/goals';
+import { GOALS, SCHOOLS, schoolLabel, type Goal } from '@/lib/goals';
 import { LENSES, SCORECARD_LEGEND, groupsForGoal, lensById } from '@/lib/lenses';
 import BubbleMap from './BubbleMap';
 import DetailDrawer from './DetailDrawer';
@@ -21,6 +21,7 @@ export default function Explorer() {
   const [hover, setHover] = useState<{ goal: Goal; x: number; y: number } | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [resetSignal, setResetSignal] = useState(0);
+  const [printedOn, setPrintedOn] = useState('');
 
   const lens = lensById(lensId);
 
@@ -51,7 +52,9 @@ export default function Explorer() {
     () => GOALS.filter((g) => !g.parent || expanded.has(g.parent)),
     [expanded],
   );
-  const shown = useMemo(() => visible.filter(isMatch).length, [visible, isMatch]);
+  // The map hides goals inside a collapsed umbrella; the table never does.
+  const inScope = view === 'table' ? GOALS : visible;
+  const shown = useMemo(() => inScope.filter(isMatch).length, [inScope, isMatch]);
 
   // Only legend entries that actually have goals behind them.
   const activeGroups = useMemo(
@@ -80,6 +83,23 @@ export default function Explorer() {
   );
 
   const allOpen = UMBRELLAS.every((id) => expanded.has(id));
+
+  /**
+   * Export by printing. The table is text, so the browser's own "Save as PDF"
+   * paginates it better than a bundled PDF writer would — and it picks up the
+   * current lens, filters, and search for free. The date is stamped here rather
+   * than during render so the prerendered markup stays stable.
+   */
+  const exportPdf = useCallback(() => {
+    setPrintedOn(
+      new Date().toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+    );
+    setTimeout(() => window.print(), 60);
+  }, []);
 
   // A search or school filter that only matches hidden children is confusing —
   // open the umbrellas so the matches are actually on screen.
@@ -150,15 +170,22 @@ export default function Explorer() {
         </div>
 
         <div className="search">
-          <input
-            type="search"
-            value={query}
-            placeholder="Search goals, conditions, measures…"
-            aria-label="Search goals"
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <div className="search-field">
+            <input
+              type="search"
+              value={query}
+              placeholder="Search goals, conditions, measures…"
+              aria-label="Search goals"
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {query && (
+              <button className="clear-search" onClick={() => setQuery('')} aria-label="Clear search">
+                ×
+              </button>
+            )}
+          </div>
           <span className="count">
-            {shown} of {visible.length}
+            {shown} of {inScope.length}
           </span>
         </div>
       </div>
@@ -181,19 +208,25 @@ export default function Explorer() {
           ))}
         </div>
 
-        {view === 'map' && (
-          <div className="toolgroup map-actions">
-            <button
-              className="chip"
-              onClick={() => setExpanded(allOpen ? new Set() : new Set(UMBRELLAS))}
-            >
-              {allOpen ? 'Collapse umbrellas' : 'Expand umbrellas'}
+        <div className="toolgroup map-actions">
+          {view === 'map' ? (
+            <>
+              <button
+                className="chip"
+                onClick={() => setExpanded(allOpen ? new Set() : new Set(UMBRELLAS))}
+              >
+                {allOpen ? 'Collapse umbrellas' : 'Expand umbrellas'}
+              </button>
+              <button className="chip" onClick={() => setResetSignal((n) => n + 1)}>
+                Reset layout
+              </button>
+            </>
+          ) : (
+            <button className="chip" onClick={exportPdf}>
+              Export PDF
             </button>
-            <button className="chip" onClick={() => setResetSignal((n) => n + 1)}>
-              Reset layout
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="legend">
@@ -222,6 +255,18 @@ export default function Explorer() {
         </span>
       </div>
 
+      {/* Print-only, so the exported PDF says what it is and what it was filtered to. */}
+      <div className="print-header">
+        <h2>Mamaronext — 2026-2027 School and District Goals</h2>
+        <p>
+          Mamaroneck Union Free School District · Arranged by {lens.label}
+          {school ? ` · School: ${schoolLabel(school)}` : ''}
+          {query.trim() ? ` · Search: “${query.trim()}”` : ''}
+          {shown !== inScope.length ? ` · ${shown} of ${inScope.length} goals` : ''}
+          {printedOn ? ` · ${printedOn}` : ''}
+        </p>
+      </div>
+
       <main className={`stage${view === 'table' ? ' is-table' : ''}`}>
         {view === 'map' ? (
           <BubbleMap
@@ -235,7 +280,7 @@ export default function Explorer() {
             resetSignal={resetSignal}
           />
         ) : (
-          <GoalTable lens={lens} expanded={expanded} isMatch={isMatch} onSelect={setSelected} />
+          <GoalTable lens={lens} isMatch={isMatch} onSelect={setSelected} />
         )}
       </main>
 

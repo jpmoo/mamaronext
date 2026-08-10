@@ -7,7 +7,6 @@ import { groupsForGoal, scorecardColor, type Lens } from '@/lib/lenses';
 
 type Props = {
   lens: Lens;
-  expanded: Set<string>;
   isMatch: (goal: Goal) => boolean;
   onSelect: (goal: Goal) => void;
 };
@@ -24,13 +23,21 @@ type Props = {
 function SemesterCell({ goal, field }: { goal: Goal; field: 'fall' | 'spring' }) {
   const children = GOALS.filter((g) => g.parent === goal.id);
 
-  if (children.length > 0) {
+  const segments =
+    children.length > 0
+      ? children.map((child) => ({
+          label: schoolLabel(child.schools[0]),
+          text: child[field] ?? '—',
+        }))
+      : goal.bySchool?.[field];
+
+  if (segments && segments.length > 0) {
     return (
       <ul className="perschool">
-        {children.map((child) => (
-          <li key={child.id}>
-            <strong>{schoolLabel(child.schools[0])}</strong>
-            <span className="clamp">{child[field] ?? '—'}</span>
+        {segments.map((segment) => (
+          <li key={segment.label}>
+            <strong>{segment.label}</strong>
+            <span className="clamp">{segment.text}</span>
           </li>
         ))}
       </ul>
@@ -43,8 +50,10 @@ function SemesterCell({ goal, field }: { goal: Goal; field: 'fall' | 'spring' })
 const scorecardTitle = (goal: Goal) =>
   SCORECARD_BUCKETS.find((b) => b.key === CLASSIFICATIONS[goal.id]?.scorecard)?.label ?? '';
 
-export default function GoalTable({ lens, expanded, isMatch, onSelect }: Props) {
-  const goals = visibleGoals(expanded);
+export default function GoalTable({ lens, isMatch, onSelect }: Props) {
+  // The table always lists every goal — collapsing an umbrella is a way of
+  // simplifying the map, not of hiding rows from a document.
+  const goals = GOALS;
 
   const buckets = lens.groups
     .map((group) => ({
