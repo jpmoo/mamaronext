@@ -6,7 +6,8 @@
     "dev": "next dev -p 8087",
     "build": "NEXT_DIST_DIR=.next-build next build",
     "start": "NEXT_DIST_DIR=.next-build next start -p 8087 -H 0.0.0.0",
-    "export": "STATIC_EXPORT=1 next build"
+    "export": "STATIC_EXPORT=1 next build",
+    "deploy": "npm run export && firebase deploy --only hosting"
   },
   "dependencies": {
     "next": "15.5.4",

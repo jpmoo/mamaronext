@@ -37,6 +37,19 @@ That writes `out/` (about 1 MB, ~20 files). Serve it with any static host, or
 locally with `cd out && python3 -m http.server 8099`. For a sub-path, set
 `BASE_PATH` on the export too: `BASE_PATH=/goals npm run export`.
 
+### Firebase Hosting
+
+`firebase.json` is committed and points at `out`, so from this directory:
+
+```bash
+npm run deploy
+```
+
+That exports and deploys in one step. Run it from the repo root — `firebase
+init` elsewhere will create its own `public/` folder with a placeholder page
+and deploy that instead, which looks like "Welcome to Firebase Hosting" at
+your URL.
+
 The Node server below is only needed if you'd rather run it that way.
 
 ## Running on a headless server
