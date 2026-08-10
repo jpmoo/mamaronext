@@ -45,33 +45,22 @@ It listens on port 8087 on every interface, so it's reachable at
 sudo ufw allow 8087/tcp
 ```
 
-To keep it running after you log out, install it as a systemd service — replace
-`YOUR_USER` and the path, then:
+To keep it running across logouts and reboots, install it as a systemd service:
 
 ```bash
-sudo tee /etc/systemd/system/mamaronext.service >/dev/null <<'UNIT'
-[Unit]
-Description=Mamaronext goals map
-After=network.target
-
-[Service]
-Type=simple
-User=YOUR_USER
-WorkingDirectory=/home/YOUR_USER/mamaronext
-ExecStart=/usr/bin/npm run start
-Restart=on-failure
-Environment=NODE_ENV=production
-
-[Install]
-WantedBy=multi-user.target
-UNIT
+BASE_PATH=/mamaronext ./deploy/install-service.sh
 ```
+
+Drop the `BASE_PATH=` prefix if you serve it at the root of a domain. The script
+builds, writes `/etc/systemd/system/mamaronext.service` with your user and paths
+filled in, and enables it so it comes back on boot. The base path is recorded in
+the unit so later rebuilds can't drift out of sync with it.
+
+To deploy a later change — stops the service, pulls, rebuilds, starts it again:
 
 ```bash
-sudo systemctl daemon-reload && sudo systemctl enable --now mamaronext && systemctl status mamaronext --no-pager
+./restart.sh
 ```
-
-To deploy a later change: `git pull && npm ci && npm run build && sudo systemctl restart mamaronext`.
 
 ### Behind a reverse proxy (Caddy, nginx)
 
