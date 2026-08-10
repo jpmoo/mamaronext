@@ -146,14 +146,26 @@ export default function BubbleMap({
       });
       sims.set(id, sim);
 
-      // Only reheat a region whose membership actually changed — expanding an
+      // Only touch a region whose membership actually changed — expanding an
       // umbrella shouldn't nudge bubbles in any other bucket.
       if (incremental) {
         const before = previousKeys.current.get(id);
         const after = keysByGroup.get(id)!;
         const changed =
           !before || before.size !== after.size || [...after].some((k) => !before.has(k));
-        if (changed) sim.alpha(0.55).restart();
+
+        if (changed) {
+          // Settle it here and now. Leaving this to the simulation's own timer
+          // means relying on requestAnimationFrame, which a tab that isn't
+          // rendering never fires — and then the new bubbles simply stay on
+          // top of their neighbours.
+          sim.alpha(0.7);
+          for (let i = 0; i < 220; i++) {
+            sim.tick();
+            clampNodes(groupNodes);
+          }
+          sim.alpha(0.1).restart();
+        }
       }
     }
 
@@ -333,28 +345,22 @@ export default function BubbleMap({
                   stroke={hexToRgba(tint, 0.28)}
                   strokeWidth={1}
                 />
-                <circle
-                  cx={region.x + 20}
-                  cy={region.y + LAYOUT.titleTop - 5}
-                  r={6}
-                  fill={tint}
-                />
                 <text
                   className="region-title"
-                  x={region.x + 34}
+                  x={region.x + 18}
                   y={region.y + LAYOUT.titleTop}
                   fill="var(--ink)"
                   fontSize={LAYOUT.titleSize}
                 >
                   {region.titleLines.map((line, i) => (
-                    <tspan key={i} x={region.x + 34} dy={i === 0 ? 0 : LAYOUT.titleLead}>
+                    <tspan key={i} x={region.x + 18} dy={i === 0 ? 0 : LAYOUT.titleLead}>
                       {line}
                     </tspan>
                   ))}
                 </text>
                 <text
                   className="region-meta"
-                  x={region.x + 34}
+                  x={region.x + 18}
                   y={
                     region.y +
                     LAYOUT.titleTop +

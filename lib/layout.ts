@@ -136,7 +136,7 @@ function finishRegion(
   width: number,
   height: number,
 ): RegionBox {
-  const titleLines = wrapToWidth(w.group.title, width - 34 - LAYOUT.pad, LAYOUT.titleSize);
+  const titleLines = wrapToWidth(w.group.title, width - 18 - LAYOUT.pad, LAYOUT.titleSize);
   return {
     group: w.group,
     x,
@@ -287,6 +287,17 @@ export function buildLayout(options: BuildOptions): MapLayout {
 
   for (const region of regions) {
     const members = goals.filter((g) => groupsForGoal(lens, g).includes(region.group.id));
+
+    // Siblings popping out of one umbrella get seeded around it, evenly spaced,
+    // so they start clear of each other rather than stacked on the parent and
+    // relying on the animation to untangle them.
+    const siblingIndex = new Map<string, { i: number; of: number }>();
+    for (const goal of members) {
+      if (!goal.parent) continue;
+      const family = members.filter((g) => g.parent === goal.parent);
+      siblingIndex.set(goal.id, { i: family.indexOf(goal), of: family.length });
+    }
+
     const innerTop = region.y + region.titleH;
     const cx = region.x + region.w / 2;
     const cy = (innerTop + region.y + region.h) / 2;
@@ -307,12 +318,15 @@ export function buildLayout(options: BuildOptions): MapLayout {
         x = carried.x;
         y = carried.y;
       } else if (goal.parent) {
-        // A child popping out of its umbrella starts at the umbrella, nudged
-        // just enough for the collision force to push it clear.
         const parentAt = previous?.get(`${goal.parent}::${region.group.id}`);
-        if (parentAt) {
-          x = parentAt.x + Math.cos(angle) * 6;
-          y = parentAt.y + Math.sin(angle) * 6;
+        const seat = siblingIndex.get(goal.id);
+        if (parentAt && seat) {
+          // On a ring just outside the umbrella, one seat per sibling.
+          const parentR = radiusFor(GOALS.find((g) => g.id === goal.parent)!) * scale;
+          const ring = parentR + r + 12;
+          const seatAngle = (seat.i / Math.max(1, seat.of)) * Math.PI * 2 - Math.PI / 2;
+          x = parentAt.x + Math.cos(seatAngle) * ring;
+          y = parentAt.y + Math.sin(seatAngle) * ring;
         }
       }
 
@@ -371,6 +385,18 @@ export function buildLayout(options: BuildOptions): MapLayout {
   // Carried-over positions were measured against the previous layout, so clamp
   // unconditionally — a bubble must never be left sitting outside its plate.
   clampNodes(nodes);
+
+  // Anything that just appeared (an umbrella's schools, most often) is pushed
+  // clear of what's already there, so an expand can never leave bubbles
+  // overlapping even if the settling animation never runs.
+  if (previous) {
+    for (const region of regions) {
+      const regionNodes = nodes.filter((n) => n.group === region.group.id);
+      for (const node of regionNodes) {
+        if (!previous.has(node.key)) separateFromNeighbours(node, regionNodes);
+      }
+    }
+  }
 
   return {
     width,
