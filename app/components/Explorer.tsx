@@ -279,11 +279,6 @@ export default function Explorer() {
             ))}
           </>
         )}
-        <span className="sizes">
-          <span className="dot" style={{ width: 18, height: 18, borderStyle: 'dashed' }} /> Umbrella
-          — click to expand
-          <span className="dot" style={{ width: 11, height: 11 }} /> School goal under an umbrella
-        </span>
       </div>
 
       {/* Print-only, so the exported PDF says what it is and what it was filtered to. */}

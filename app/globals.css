@@ -287,21 +287,6 @@ button {
   flex: none;
 }
 
-.legend .sizes {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-left: auto;
-  color: var(--muted);
-}
-
-.legend .sizes span.dot {
-  border-radius: 50%;
-  border: 1.5px solid var(--muted);
-  background: rgba(137, 135, 129, 0.14);
-  display: inline-block;
-}
-
 /* ── Map ────────────────────────────────────────────────────────────────── */
 
 .stage {
@@ -799,9 +784,12 @@ ul.perschool .clamp {
   flex: none;
 }
 
-.bucket-toggle:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.bucket-toggle:hover .caret {
+  transform: scale(1.25);
+}
+
+.bucket-toggle .caret {
+  transition: transform 0.12s;
 }
 
 tr.bucket-head th {
