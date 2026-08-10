@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import logo from '@/public/logo.png';
 import { GOALS, SCHOOLS, schoolLabel, type Goal } from '@/lib/goals';
-import { LENSES, SCORECARD_LEGEND, groupsForGoal, lensById } from '@/lib/lenses';
+import { LENSES, THEME_LEGEND, groupsForGoal, lensById } from '@/lib/lenses';
 import BubbleMap from './BubbleMap';
 import DetailDrawer from './DetailDrawer';
 import GoalTable, { tableBuckets } from './GoalTable';
@@ -261,24 +261,13 @@ export default function Explorer() {
       </div>
 
       <div className="legend">
-        {lens.colorMode === 'group' ? (
-          activeGroups.map((group) => (
-            <span className="item" key={group.id}>
-              <span className="swatch" style={{ background: group.color }} />
-              {group.title}
-            </span>
-          ))
-        ) : (
-          <>
-            <span className="legend-note">Colored by scorecard bucket:</span>
-            {SCORECARD_LEGEND.map((b) => (
-              <span className="item" key={b.id}>
-                <span className="swatch" style={{ background: b.color }} />
-                {b.short} · {b.title}
-              </span>
-            ))}
-          </>
-        )}
+        <span className="legend-note">Colored by kind of work:</span>
+        {THEME_LEGEND.map((t) => (
+          <span className="item" key={t.id} title={t.blurb}>
+            <span className="swatch" style={{ background: t.color }} />
+            {t.title}
+          </span>
+        ))}
       </div>
 
       {/* Print-only, so the exported PDF says what it is and what it was filtered to. */}

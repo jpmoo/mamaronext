@@ -1099,15 +1099,12 @@ table.goals tr:hover .clamp {
   }
 
   /*
-   * No row ever splits across a page. Measured at the printed width, the
-   * tallest row (Elementary Literacy, with four schools inline) is 324px
-   * against a 743px page, so nothing needs to fragment — and forbidding it
-   * keeps Chrome away from the table-fragmentation path that was emitting
-   * runs of blank pages.
+   * No break hints on rows at all.
+   *
+   * `break-inside: avoid` here tripled the page count on a real export (34 ->
+   * 99), so whatever is mis-paginating that table treats an unbreakable row as
+   * a reason to start a new page. Leave the decision to the browser.
    */
-  table.goals tr {
-    break-inside: avoid;
-  }
 
   tr.bucket-head th {
     position: static;

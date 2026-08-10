@@ -8,6 +8,7 @@ import {
   buildLayout,
   clampNodes,
   createSimulation,
+  separateFromNeighbours,
   PAGE_BG,
   blend,
   bubbleLabel,
@@ -250,8 +251,22 @@ export default function BubbleMap({
 
     if (drag.moved) {
       // Leave fx/fy set so the bubble stays where it was dropped. "Reset
-      // layout" is what releases every pin.
-      drag.sim?.alpha(0.15).restart();
+      // layout" is what releases every pin. Nudge it clear of anything it
+      // landed on first — a pinned neighbour can't move aside on its own.
+      separateFromNeighbours(drag.node, drag.groupNodes);
+
+      // Settle the neighbours here rather than leaving it to the simulation's
+      // own timer: that timer is requestAnimationFrame-backed, and in a tab
+      // that isn't rendering it never fires, so overlaps would just persist.
+      if (drag.sim) {
+        drag.sim.alpha(0.4);
+        for (let i = 0; i < 40; i++) {
+          drag.sim.tick();
+          clampNodes(drag.groupNodes);
+        }
+        drag.sim.alpha(0.12).restart();
+      }
+      setFrame((f) => f + 1);
     } else {
       drag.node.fx = null;
       drag.node.fy = null;

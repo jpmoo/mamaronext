@@ -28,12 +28,14 @@ export type Lens = {
   groups: LensGroup[];
   groupsFor: (goal: Goal) => string[];
   /**
-   * 'group' colors bubbles by their region — only valid at 4 groups or fewer,
-   * where the categorical palette validates. 'scorecard' colors bubbles by the
-   * goal's scorecard bucket and leaves the region plates neutral, for lenses
-   * with too many regions to color safely.
+   * Bubbles are always coloured by theme (see `themeColor`), whatever the
+   * arrangement — colour means "what kind of work is this", position means
+   * "how is it filed right now". This only controls the region plates: 'group'
+   * tints them by their own group, which is honest for the themes lens because
+   * the groups *are* the themes; every other lens leaves them neutral so a
+   * second colour scale can't compete with the bubbles.
    */
-  colorMode: 'group' | 'scorecard';
+  colorMode: 'group' | 'neutral';
 };
 
 /**
@@ -62,31 +64,21 @@ export const LENSES: Lens[] = [
   {
     id: 'scorecard',
     label: 'Scorecard buckets',
-    colorMode: 'group',
-    groups: SCORECARD_BUCKETS.map((b, i) => ({
-      id: b.key,
-      title: b.label,
-      blurb: b.blurb,
-      color: PALETTE[i],
-    })),
+    colorMode: 'neutral',
+    groups: SCORECARD_BUCKETS.map((b) => ({ id: b.key, title: b.label, blurb: b.blurb })),
     groupsFor: (goal) => [classify(goal)?.scorecard ?? UNCLASSIFIED],
   },
   {
     id: 'initiatives',
     label: "Superintendent's initiatives",
-    colorMode: 'group',
-    groups: INITIATIVES.map((init, i) => ({
-      id: init.id,
-      title: init.title,
-      blurb: init.blurb,
-      color: PALETTE[i],
-    })),
+    colorMode: 'neutral',
+    groups: INITIATIVES.map((init) => ({ id: init.id, title: init.title, blurb: init.blurb })),
     groupsFor: (goal) => [goal.initiative],
   },
   {
     id: 'boe-focus',
     label: 'Board of Education focus areas',
-    colorMode: 'scorecard',
+    colorMode: 'neutral',
     groups: BOE_FOCUS.map((f) => ({ id: f.key, title: f.label, blurb: f.blurb })),
     groupsFor: (goal) => {
       const focus = classify(goal)?.boeFocus;
@@ -96,7 +88,7 @@ export const LENSES: Lens[] = [
   {
     id: 'data-points',
     label: 'Data points touched',
-    colorMode: 'scorecard',
+    colorMode: 'neutral',
     groups: DATA_POINTS.map((d) => ({ id: d.key, title: d.label, blurb: d.blurb })),
     groupsFor: (goal) => {
       const points = classify(goal)?.dataPoints;
@@ -128,20 +120,22 @@ export function groupsForGoal(lens: Lens, goal: Goal): string[] {
 }
 
 /**
- * Scorecard-bucket color, used for bubbles whenever a lens has too many regions
- * to color by region. Slots match the scorecard lens, so a goal keeps the same
- * color across both views.
+ * Every bubble's colour, in every arrangement: the kind of work it represents.
+ * Holding this constant lets colour be read against any lens — you can see at a
+ * glance which scorecard buckets or data points the personalization work lands
+ * in. Validated all-pairs on the light surface (worst pair ΔE 13.0 colourblind,
+ * 16.3 normal-vision).
  */
-export const scorecardColor = (goal: Goal) => {
-  const bucket = classify(goal)?.scorecard;
-  const i = SCORECARD_BUCKETS.findIndex((b) => b.key === bucket);
+export const themeColor = (goal: Goal) => {
+  const theme = classify(goal)?.theme;
+  const i = THEMES.findIndex((t) => t.key === theme);
   return PALETTE[i] ?? '#898781';
 };
 
-/** The scorecard palette as a legend-ready list. */
-export const SCORECARD_LEGEND = SCORECARD_BUCKETS.map((b, i) => ({
-  id: b.key,
-  title: b.label,
-  short: b.short,
+/** The theme palette as a legend-ready list. */
+export const THEME_LEGEND = THEMES.map((t, i) => ({
+  id: t.key,
+  title: t.label,
+  blurb: t.blurb,
   color: PALETTE[i],
 }));

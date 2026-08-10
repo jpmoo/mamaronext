@@ -9,7 +9,7 @@ import {
   type SimulationNodeDatum,
 } from 'd3-force';
 import { GOALS, schoolLabel, type Goal } from './goals';
-import { groupsForGoal, scorecardColor, type Lens, type LensGroup } from './lenses';
+import { groupsForGoal, themeColor, type Lens, type LensGroup } from './lenses';
 
 export const LAYOUT = {
   gutter: 16,
@@ -290,7 +290,6 @@ export function buildLayout(options: BuildOptions): MapLayout {
     const innerTop = region.y + region.titleH;
     const cx = region.x + region.w / 2;
     const cy = (innerTop + region.y + region.h) / 2;
-    const color = lens.colorMode === 'group' ? region.group.color! : undefined;
 
     members.forEach((goal, i) => {
       const key = `${goal.id}::${region.group.id}`;
@@ -321,7 +320,7 @@ export function buildLayout(options: BuildOptions): MapLayout {
         key,
         goal,
         group: region.group.id,
-        color: color ?? scorecardColor(goal),
+        color: themeColor(goal),
         r,
         x,
         y,
@@ -396,6 +395,48 @@ export function clampNodes(nodes: BubbleNode[]): void {
     if (n.fx != null) n.fx = x;
     if (n.fy != null) n.fy = y;
   }
+}
+
+/**
+ * Push `node` clear of any bubble it is sitting on top of.
+ *
+ * The simulation resolves overlaps by moving whichever node is free, but a
+ * bubble dropped onto another *pinned* bubble is a stand-off — neither can
+ * move, and the overlap is permanent. So the one that just landed is the one
+ * that gives way.
+ */
+export function separateFromNeighbours(node: BubbleNode, others: BubbleNode[]): void {
+  for (let pass = 0; pass < 24; pass++) {
+    let moved = false;
+
+    for (const other of others) {
+      if (other === node) continue;
+
+      const gap = node.r + other.r + 6;
+      let dx = node.x - other.x;
+      let dy = node.y - other.y;
+      let dist = Math.hypot(dx, dy);
+
+      if (dist >= gap) continue;
+
+      // Exactly coincident: pick a deterministic direction to escape along.
+      if (dist === 0) {
+        dx = 1;
+        dy = 0;
+        dist = 1;
+      }
+
+      const push = gap - dist;
+      node.x = Math.min(node.maxX - node.r, Math.max(node.minX + node.r, node.x + (dx / dist) * push));
+      node.y = Math.min(node.maxY - node.r, Math.max(node.minY + node.r, node.y + (dy / dist) * push));
+      moved = true;
+    }
+
+    if (!moved) break;
+  }
+
+  if (node.fx != null) node.fx = node.x;
+  if (node.fy != null) node.fy = node.y;
 }
 
 export function createSimulation(

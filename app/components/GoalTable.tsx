@@ -1,9 +1,9 @@
 'use client';
 
 import { GOALS, schoolLabel, type Goal } from '@/lib/goals';
-import { CLASSIFICATIONS, SCORECARD_BUCKETS } from '@/lib/classifications';
+import { CLASSIFICATIONS, THEMES } from '@/lib/classifications';
 import { visibleGoals } from '@/lib/layout';
-import { groupsForGoal, scorecardColor, type Lens } from '@/lib/lenses';
+import { groupsForGoal, themeColor, type Lens } from '@/lib/lenses';
 
 type Props = {
   lens: Lens;
@@ -62,8 +62,8 @@ function SemesterCell({ goal, field }: { goal: Goal; field: 'fall' | 'spring' })
   return <div className="clamp">{goal[field] ?? '—'}</div>;
 }
 
-const scorecardTitle = (goal: Goal) =>
-  SCORECARD_BUCKETS.find((b) => b.key === CLASSIFICATIONS[goal.id]?.scorecard)?.label ?? '';
+const themeTitle = (goal: Goal) =>
+  THEMES.find((t) => t.key === CLASSIFICATIONS[goal.id]?.theme)?.label ?? '';
 
 export default function GoalTable({
   lens,
@@ -125,15 +125,11 @@ export default function GoalTable({
               <tr key={goal.id}>
                 <td className="goal-cell">
                   <button onClick={() => onSelect(goal)}>
-                    {/* Same rule the map uses: the group's color when the lens
-                        colors by group, otherwise the scorecard bucket's. */}
+                    {/* Same rule the map uses: colour is always the theme. */}
                     <span
                       className="init-dot"
-                      style={{
-                        background:
-                          lens.colorMode === 'group' ? group.color : scorecardColor(goal),
-                      }}
-                      title={lens.colorMode === 'group' ? group.title : scorecardTitle(goal)}
+                      style={{ background: themeColor(goal) }}
+                      title={themeTitle(goal)}
                     />
                     {goal.parent ? '↳ ' : ''}
                     {goal.title}
