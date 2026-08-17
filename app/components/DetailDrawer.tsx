@@ -14,6 +14,8 @@ type Props = {
   goal: Goal;
   onClose: () => void;
   onNavigate: (goal: Goal) => void;
+  /** Whether the internal framings (initiative, BoE focus) are on show. */
+  showAdvanced: boolean;
 };
 
 /** Renders a plan or measure, breaking it out per school when the goal is written that way. */
@@ -33,7 +35,7 @@ function PlanBody({ text, segments }: { text?: string; segments?: PlanSegment[] 
   return <>{text}</>;
 }
 
-export default function DetailDrawer({ goal, onClose, onNavigate }: Props) {
+export default function DetailDrawer({ goal, onClose, onNavigate, showAdvanced }: Props) {
   const init = initiativeById(goal.initiative);
 
   useEffect(() => {
@@ -91,7 +93,10 @@ export default function DetailDrawer({ goal, onClose, onNavigate }: Props) {
             </div>
           )}
           <div className="tagrow">
-            <span className="tag">{init.title}</span>
+            <span className="tagrow-label">Goals area</span>
+            {/* The initiative and BoE focus chips mirror the two arrangements
+                that are themselves hidden without `?expand`. */}
+            {showAdvanced && <span className="tag">{init.title}</span>}
             {theme && (
               <span className="tag" title={theme.blurb}>
                 {theme.label}
@@ -103,7 +108,7 @@ export default function DetailDrawer({ goal, onClose, onNavigate }: Props) {
               </span>
             )}
           </div>
-          {focus.length > 0 && (
+          {showAdvanced && focus.length > 0 && (
             <div className="tagrow tagrow--data">
               <span className="tagrow-label">BoE focus</span>
               {focus.map((f) => (

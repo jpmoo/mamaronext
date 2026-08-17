@@ -329,7 +329,12 @@ export default function Explorer() {
       )}
 
       {selected && (
-        <DetailDrawer goal={selected} onClose={() => setSelected(null)} onNavigate={setSelected} />
+        <DetailDrawer
+          goal={selected}
+          onClose={() => setSelected(null)}
+          onNavigate={setSelected}
+          showAdvanced={showAdvanced}
+        />
       )}
       </div>
 
