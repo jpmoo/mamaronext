@@ -25,6 +25,18 @@ export default function Explorer() {
   const [printedOn, setPrintedOn] = useState('');
   const [collapsedBuckets, setCollapsedBuckets] = useState<Set<string>>(new Set());
 
+  // `?expand` (or `&expand`) reveals the internal framings. Read after mount so
+  // the prerendered markup and the first client render agree.
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  useEffect(() => {
+    setShowAdvanced(new URLSearchParams(window.location.search).has('expand'));
+  }, []);
+
+  const availableLenses = useMemo(
+    () => LENSES.filter((l) => !l.advanced || showAdvanced),
+    [showAdvanced],
+  );
+
   const lens = lensById(lensId);
 
   const isMatch = useCallback(
@@ -168,7 +180,7 @@ export default function Explorer() {
             aria-label="Organizing principle"
             onChange={(e) => setLensId(e.target.value)}
           >
-            {LENSES.map((l) => (
+            {availableLenses.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.label}
               </option>

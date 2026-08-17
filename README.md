@@ -151,6 +151,11 @@ re-filed each time:
 | **Superintendent's Initiatives** | the four initiatives from the goals chart |
 | **Data points touched** | every named data source a goal's plan or measure uses |
 
+Superintendent's initiatives and Board of Education focus areas are internal
+framings, so they only appear in the picker when the page is loaded with an
+`expand` query parameter — `…/?expand`. Without it the picker offers the three
+public arrangements.
+
 In the data-points view a goal appears **once per data source it touches**, so a
 goal touching two sources draws twice — that view has 38 bubbles for 28 goals. Its regions are neutral and bubbles keep their initiative color,
 because more than four categorical colors can't be told apart reliably.

@@ -36,6 +36,11 @@ export type Lens = {
    * second colour scale can't compete with the bubbles.
    */
   colorMode: 'group' | 'neutral';
+  /**
+   * Hidden from the arrangement picker unless the page is loaded with an
+   * `expand` query parameter — internal framings that aren't for every reader.
+   */
+  advanced?: boolean;
 };
 
 /**
@@ -71,6 +76,7 @@ export const LENSES: Lens[] = [
   {
     id: 'initiatives',
     label: "Superintendent's initiatives",
+    advanced: true,
     colorMode: 'neutral',
     groups: INITIATIVES.map((init) => ({ id: init.id, title: init.title, blurb: init.blurb })),
     groupsFor: (goal) => [goal.initiative],
@@ -78,6 +84,7 @@ export const LENSES: Lens[] = [
   {
     id: 'boe-focus',
     label: 'Board of Education focus areas',
+    advanced: true,
     colorMode: 'neutral',
     groups: BOE_FOCUS.map((f) => ({ id: f.key, title: f.label, blurb: f.blurb })),
     groupsFor: (goal) => {
