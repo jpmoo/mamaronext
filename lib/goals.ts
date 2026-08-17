@@ -393,7 +393,7 @@ export const GOALS: Goal[] = [
     title: 'Science of learning',
     kind: 'district',
     scope: 'District-Wide',
-    schools: ['district'],
+    schools: ALL_SCHOOLS,
     condition:
       'Noting a gap in shared understanding and measurement of student engagement: persistent lack of common language on intersections of learning science and practice through effortful thinking.',
     fall:
@@ -426,7 +426,7 @@ export const GOALS: Goal[] = [
     title: 'Technology plan implementation',
     kind: 'district',
     scope: 'District-Wide',
-    schools: ['district'],
+    schools: ALL_SCHOOLS,
     condition:
       'Implementing district-wide technology playbook: need for rapid scaling of practice aligned to the four promises outlined in the plan.',
     fall:
@@ -460,7 +460,7 @@ export const GOALS: Goal[] = [
     title: 'ELL sheltered protocol training',
     kind: 'district',
     scope: 'District-Wide',
-    schools: ['district'],
+    schools: ALL_SCHOOLS,
     condition:
       'Noting gaps in ELL 8th grade science Regents achievement, in secondary coursework, and in elementary literacy performance: need for educator PD on sheltered instructional protocols, with coaching support.',
     fall:
@@ -476,7 +476,7 @@ export const GOALS: Goal[] = [
     title: 'Students of Promise',
     kind: 'district',
     scope: 'District-Wide',
-    schools: ['district'],
+    schools: ALL_SCHOOLS,
     condition:
       'Noting a gap in advanced-coursework access for students with various demographic and other opportunity barriers: need for systems to identify and nurture academic promise at earlier grade levels, and provide support for successful participation in advanced coursework in middle and high school.',
     fall:
@@ -563,7 +563,7 @@ export const GOALS: Goal[] = [
     title: 'DASA & Response Protocol',
     kind: 'district',
     scope: 'District-Wide',
-    schools: ['district'],
+    schools: ALL_SCHOOLS,
     condition:
       'Noting a gap in response consistency: need for consistent response protocols that addresses needs of victim and perpetrator; need for data analysis cycles to promote targeted improvement in implementation.',
     fall:
