@@ -93,7 +93,7 @@ export default function DetailDrawer({ goal, onClose, onNavigate, showAdvanced }
             </div>
           )}
           <div className="tagrow">
-            <span className="tagrow-label">Goals area</span>
+            <span className="tagrow-label">Goals areas</span>
             {/* The initiative and BoE focus chips mirror the two arrangements
                 that are themselves hidden without `?expand`. */}
             {showAdvanced && <span className="tag">{init.title}</span>}
